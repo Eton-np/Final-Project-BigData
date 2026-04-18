@@ -1,0 +1,539 @@
+:root {
+    --bg: #06131f;
+    --bg-secondary: #0b2232;
+    --panel: rgba(10, 25, 38, 0.88);
+    --panel-strong: rgba(13, 33, 49, 0.96);
+    --line: rgba(144, 199, 255, 0.12);
+    --text: #f4fbff;
+    --muted: #95b6cf;
+    --cyan: #51d0ff;
+    --lime: #8ef58d;
+    --amber: #ffcf66;
+    --rose: #ff7f8e;
+    --violet: #9d8cff;
+    --shadow: 0 30px 80px rgba(1, 8, 16, 0.5);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    color: var(--text);
+    font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+    background:
+        radial-gradient(circle at top left, rgba(81, 208, 255, 0.16), transparent 30%),
+        radial-gradient(circle at top right, rgba(142, 245, 141, 0.14), transparent 28%),
+        linear-gradient(180deg, #06131f 0%, #091927 38%, #0d1e2f 100%);
+}
+
+.page-shell {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 28px 18px 48px;
+}
+
+.topbar,
+.hero-grid,
+.metric-grid,
+.visual-grid,
+.filter-grid,
+.mix-grid,
+.spotlight-grid {
+    display: grid;
+    gap: 18px;
+}
+
+.topbar {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.kicker,
+.eyebrow,
+.panel-heading p,
+label span,
+.metric-card span,
+.highlight-card span,
+.mix-card span,
+.hero-meta span,
+.note-card p,
+table th {
+    color: var(--muted);
+}
+
+.kicker,
+.eyebrow {
+    margin: 0 0 8px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+    margin: 0;
+}
+
+h1 {
+    font-size: clamp(2.1rem, 5vw, 4.2rem);
+    line-height: 0.95;
+}
+
+.page-links {
+    display: flex;
+    gap: 12px;
+}
+
+.page-links a,
+.ghost-button,
+select,
+input {
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    font: inherit;
+}
+
+.page-links a {
+    padding: 10px 16px;
+    text-decoration: none;
+}
+
+.page-links a.active {
+    background: linear-gradient(135deg, rgba(81, 208, 255, 0.2), rgba(157, 140, 255, 0.22));
+    border-color: rgba(81, 208, 255, 0.32);
+}
+
+.hero-grid {
+    grid-template-columns: 1.3fr 0.9fr;
+    margin-bottom: 18px;
+}
+
+.hero-panel,
+.metric-card,
+.viz-card,
+.table-card,
+.highlight-card,
+.mix-card,
+.spotlight-card,
+.note-card {
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, var(--panel-strong) 0%, var(--panel) 100%);
+    box-shadow: var(--shadow);
+    border-radius: 28px;
+}
+
+.hero-panel {
+    padding: 24px;
+}
+
+.hero-panel-market {
+    background:
+        radial-gradient(circle at top right, rgba(81, 208, 255, 0.18), transparent 28%),
+        linear-gradient(180deg, rgba(8, 29, 42, 0.98), rgba(9, 22, 34, 0.96));
+}
+
+.hero-panel-insights {
+    background:
+        radial-gradient(circle at top right, rgba(157, 140, 255, 0.18), transparent 28%),
+        linear-gradient(180deg, rgba(16, 25, 48, 0.98), rgba(9, 22, 34, 0.96));
+}
+
+.hero-panel h2 {
+    margin-bottom: 14px;
+    max-width: 14ch;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    line-height: 1;
+}
+
+.hero-copy {
+    max-width: 62ch;
+    line-height: 1.7;
+}
+
+.hero-meta {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-top: 20px;
+}
+
+.hero-meta div {
+    padding: 14px 16px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--line);
+}
+
+.hero-meta strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 1rem;
+}
+
+.panel-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.ghost-button {
+    padding: 10px 14px;
+    cursor: pointer;
+}
+
+.filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+label {
+    display: grid;
+    gap: 8px;
+}
+
+select,
+input {
+    width: 100%;
+    padding: 12px 14px;
+}
+
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.04)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f4fbff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 14px center / 16px;
+    padding-right: 42px;
+}
+
+select option {
+    color: #102538;
+    background: #ffffff;
+}
+
+select option:checked,
+select option:hover,
+select option:focus {
+    color: #ffffff;
+    background: #1d4f7a;
+}
+
+.metric-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 18px;
+}
+
+.metric-card {
+    padding: 18px;
+}
+
+.metric-card strong {
+    display: block;
+    margin-top: 12px;
+    font-size: 1.9rem;
+}
+
+.metric-card small {
+    display: block;
+    margin-top: 10px;
+    color: var(--muted);
+}
+
+.metric-card.positive strong,
+.highlight-card .positive,
+.mix-card.positive strong,
+.spotlight-card.positive h4,
+.positive {
+    color: var(--lime);
+}
+
+.metric-card.negative strong,
+.mix-card.negative strong,
+.spotlight-card.negative h4,
+.negative {
+    color: var(--rose);
+}
+
+.neutral {
+    color: var(--text);
+}
+
+.insight-ribbon {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.highlight-card {
+    padding: 18px;
+}
+
+.highlight-card strong {
+    display: block;
+    margin-top: 10px;
+    font-size: 1.55rem;
+}
+
+.highlight-card small {
+    display: block;
+    margin-top: 10px;
+    color: var(--muted);
+}
+
+.visual-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 18px;
+}
+
+.viz-card,
+.table-card {
+    padding: 20px;
+}
+
+.heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.heatmap-tile {
+    padding: 16px;
+    min-height: 106px;
+    border-radius: 22px;
+    border: 1px solid transparent;
+    color: var(--text);
+    text-align: left;
+    cursor: default;
+}
+
+.heatmap-tile span,
+.heatmap-tile small {
+    display: block;
+}
+
+.heatmap-tile strong {
+    display: block;
+    margin: 10px 0 8px;
+    font-size: 1.3rem;
+}
+
+.heatmap-tile.positive {
+    background: linear-gradient(135deg, rgba(52, 154, 84, 0.3), rgba(22, 66, 40, 0.92));
+    border-color: rgba(142, 245, 141, 0.24);
+}
+
+.heatmap-tile.negative {
+    background: linear-gradient(135deg, rgba(176, 58, 74, 0.34), rgba(63, 18, 26, 0.92));
+    border-color: rgba(255, 127, 142, 0.24);
+}
+
+.heatmap-tile.neutral {
+    background: linear-gradient(135deg, rgba(84, 107, 132, 0.3), rgba(18, 31, 45, 0.92));
+    border-color: rgba(144, 199, 255, 0.14);
+}
+
+.scatter-chart {
+    width: 100%;
+    min-height: 320px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 20px;
+}
+
+.scatter-axis {
+    stroke: rgba(144, 199, 255, 0.18);
+    stroke-width: 1;
+}
+
+.scatter-point circle {
+    fill-opacity: 0.78;
+}
+
+.scatter-point circle.positive {
+    fill: var(--lime);
+}
+
+.scatter-point circle.negative {
+    fill: var(--rose);
+}
+
+.scatter-point circle.neutral {
+    fill: var(--cyan);
+}
+
+.scatter-label {
+    fill: var(--muted);
+    font-size: 12px;
+}
+
+.stacked-bars,
+.notes-stack {
+    display: grid;
+    gap: 12px;
+}
+
+.bar-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 90px;
+    gap: 12px;
+    align-items: center;
+}
+
+.bar-track {
+    height: 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 999px;
+}
+
+.bar-fill.positive {
+    background: linear-gradient(90deg, rgba(142, 245, 141, 0.28), var(--lime));
+}
+
+.bar-fill.negative {
+    background: linear-gradient(90deg, rgba(255, 127, 142, 0.3), var(--rose));
+}
+
+.bar-fill.neutral {
+    background: linear-gradient(90deg, rgba(81, 208, 255, 0.28), var(--cyan));
+}
+
+.mix-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mix-grid.compact {
+    margin-top: 12px;
+}
+
+.mix-card {
+    padding: 18px;
+}
+
+.mix-card strong {
+    display: block;
+    margin-top: 12px;
+    font-size: 1.5rem;
+}
+
+.mix-card.subtle {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.spotlight-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.spotlight-card,
+.note-card {
+    padding: 18px;
+}
+
+.spotlight-card span {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.72rem;
+}
+
+.spotlight-card h4 {
+    margin-top: 10px;
+    font-size: 1.3rem;
+}
+
+.spotlight-card strong {
+    display: block;
+    margin: 14px 0 10px;
+    font-size: 1.8rem;
+}
+
+.spotlight-card p,
+.note-card p {
+    line-height: 1.65;
+}
+
+.table-wrap {
+    overflow: auto;
+}
+
+table {
+    width: 100%;
+    min-width: 1100px;
+    border-collapse: collapse;
+}
+
+table th,
+table td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+}
+
+table th {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.ticker-cell {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+@media (max-width: 1200px) {
+    .hero-grid,
+    .visual-grid,
+    .metric-grid,
+    .insight-ribbon {
+        grid-template-columns: 1fr;
+    }
+
+    .heatmap-grid,
+    .spotlight-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .page-shell {
+        padding: 18px 12px 34px;
+    }
+
+    .topbar,
+    .filter-grid,
+    .mix-grid,
+    .heatmap-grid,
+    .spotlight-grid,
+    .hero-meta {
+        grid-template-columns: 1fr;
+    }
+
+    .page-links {
+        flex-wrap: wrap;
+    }
+
+    .bar-row {
+        grid-template-columns: 66px 1fr 72px;
+    }
+}

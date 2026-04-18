@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แดชบอร์ดภาพรวมตลาด</title>
+    <link rel="stylesheet" href="/static/styles.css?v=20260411b">
+</head>
+<body>
+    <main class="page-shell">
+        <section class="topbar">
+            <div>
+                <p class="kicker">ภาพรวมที่เตรียมไว้</p>
+                <h1>แดชบอร์ดภาพรวมตลาด</h1>
+            </div>
+            <nav class="page-links">
+                <a href="/" class="active">ภาพรวมตลาด</a>
+                <a href="/insights">สัญญาณการลงทุน</a>
+            </nav>
+        </section>
+
+        <section class="hero-grid">
+            <article class="hero-panel hero-panel-market">
+                <p class="eyebrow">ความกว้างของตลาด</p>
+                <h2>ติดตามจังหวะล่าสุดของตลาดได้จากหน้าจอเดียว</h2>
+                <p class="hero-copy">
+                    หน้านี้ผสานภาพรวมตลาด โมเมนตัม ความเสี่ยง และการมีส่วนร่วมของหุ้นแต่ละตัว
+                    เพื่อให้เราไล่ดู snapshot ล่าสุดได้เร็ว ก่อนลงลึกรายตัว
+                </p>
+                <div class="hero-meta">
+                    <div>
+                        <span>ข้อมูล ณ วันที่</span>
+                        <strong id="data-as-of">{{ payload.data_as_of or "ยังไม่มี snapshot" }}</strong>
+                    </div>
+                    <div>
+                        <span>จัดเตรียมเมื่อ</span>
+                        <strong id="generated-at">{{ payload.generated_at }}</strong>
+                    </div>
+                </div>
+            </article>
+
+            <article class="hero-panel hero-panel-filter">
+                <div class="panel-heading">
+                    <h3>ตัวกรอง</h3>
+                    <button class="ghost-button" id="reset-filters" type="button">ล้างค่า</button>
+                </div>
+                <div class="filter-grid">
+                    <label>
+                        <span>ค้นหา Ticker</span>
+                        <input id="ticker-filter" type="search" placeholder="เช่น AAPL, MSFT, NVDA">
+                    </label>
+                    <label>
+                        <span>สัญญาณ</span>
+                        <select id="signal-filter">
+                            <option value="All">ทุกสัญญาณ</option>
+                            {% for option in payload.filters.signals %}
+                            <option value="{{ option }}">{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>โซน RSI</span>
+                        <select id="rsi-filter">
+                            <option value="All">ทุกช่วง RSI</option>
+                            {% for option in payload.filters.rsi_buckets %}
+                            <option value="{{ option }}">{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>ระดับราคา</span>
+                        <select id="band-filter">
+                            <option value="All">ทุกระดับราคา</option>
+                            {% for option in payload.filters.price_bands %}
+                            <option value="{{ option }}">{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>การจัดกลุ่ม</span>
+                        <select id="membership-filter">
+                            <option value="All">ทั้งหมด</option>
+                            <option value="พอร์ตหลัก">พอร์ตหลัก</option>
+                            <option value="เฝ้าดูเติบโต">รายชื่อเฝ้าดูเติบโต</option>
+                            <option value="ทั่วไป">ทั่วไป</option>
+                        </select>
+                    </label>
+                </div>
+            </article>
+        </section>
+
+        <section class="metric-grid" id="summary-grid"></section>
+
+        <section class="insight-ribbon" id="highlight-ribbon"></section>
+
+        <section class="visual-grid">
+            <article class="viz-card">
+                <div class="panel-heading">
+                    <h3>ฮีตแมปผลตอบแทน</h3>
+                    <p>หุ้นที่เด่นที่สุดตามการเปลี่ยนแปลงราคาและปริมาณการซื้อขาย</p>
+                </div>
+                <div id="heatmap-grid" class="heatmap-grid"></div>
+            </article>
+
+            <article class="viz-card">
+                <div class="panel-heading">
+                    <h3>ความเสี่ยงเทียบผลตอบแทน</h3>
+                    <p>ขนาดวงกลมสะท้อนปริมาณการซื้อขาย</p>
+                </div>
+                <svg id="scatter-chart" viewBox="0 0 620 320" class="scatter-chart" aria-label="กราฟกระจายความเสี่ยงเทียบผลตอบแทน"></svg>
+            </article>
+        </section>
+
+        <section class="visual-grid">
+            <article class="viz-card">
+                <div class="panel-heading">
+                    <h3>ตัวเคลื่อนไหวเด่น</h3>
+                    <p>หุ้นที่บวกแรงและลบแรงที่สุดใน snapshot ปัจจุบัน</p>
+                </div>
+                <div id="movers-chart" class="stacked-bars"></div>
+            </article>
+
+            <article class="viz-card">
+                <div class="panel-heading">
+                    <h3>สัดส่วนสัญญาณ</h3>
+                    <p>การกระจายตัวของบรรยากาศตลาดปัจจุบัน</p>
+                </div>
+                <div id="signal-mix" class="mix-grid"></div>
+                <div id="rsi-mix" class="mix-grid compact"></div>
+            </article>
+        </section>
+
+        <section class="visual-grid">
+            <article class="viz-card">
+                <div class="panel-heading">
+                    <h3>ซื้อขายคึกคักที่สุด</h3>
+                    <p>หุ้นที่มีปริมาณซื้อขายสูงสุด</p>
+                </div>
+                <div id="most-active-chart" class="stacked-bars"></div>
+            </article>
+        </section>
+
+        <section class="table-card">
+            <div class="panel-heading">
+                <h3>ตารางสำรวจหุ้นทั้งหมด</h3>
+                <p id="table-caption">รายการหุ้นตามตัวกรองที่เลือก</p>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticker</th>
+                            <th>สัญญาณ</th>
+                            <th>ผลตอบแทน</th>
+                            <th>ช่วงแกว่ง</th>
+                            <th>ปิด</th>
+                            <th>ปริมาณ</th>
+                            <th>RSI</th>
+                            <th>MACD</th>
+                            <th>ระดับราคา</th>
+                            <th>สถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="market-table-body"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const initialPayload = {{ payload | tojson }};
+
+        const summaryGrid = document.getElementById("summary-grid");
+        const highlightRibbon = document.getElementById("highlight-ribbon");
+        const heatmapGrid = document.getElementById("heatmap-grid");
+        const scatterChart = document.getElementById("scatter-chart");
+        const moversChart = document.getElementById("movers-chart");
+        const mostActiveChart = document.getElementById("most-active-chart");
+        const signalMix = document.getElementById("signal-mix");
+        const rsiMix = document.getElementById("rsi-mix");
+        const marketTableBody = document.getElementById("market-table-body");
+        const tableCaption = document.getElementById("table-caption");
+
+        const tickerFilter = document.getElementById("ticker-filter");
+        const signalFilter = document.getElementById("signal-filter");
+        const rsiFilter = document.getElementById("rsi-filter");
+        const bandFilter = document.getElementById("band-filter");
+        const membershipFilter = document.getElementById("membership-filter");
+        const resetFilters = document.getElementById("reset-filters");
+
+        function formatPercent(value) {
+            if (value === null || value === undefined) return "-";
+            return `${(value * 100).toFixed(2)}%`;
+        }
+
+        function formatNumber(value, digits = 2) {
+            if (value === null || value === undefined) return "-";
+            return Number(value).toLocaleString(undefined, {
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits
+            });
+        }
+
+        function formatVolume(value) {
+            if (value === null || value === undefined) return "-";
+            return Number(value).toLocaleString();
+        }
+
+        function signedClass(value) {
+            if (value > 0) return "positive";
+            if (value < 0) return "negative";
+            return "neutral";
+        }
+
+        function passesMembershipFilter(row, membershipValue) {
+            if (membershipValue === "All") return true;
+            if (membershipValue === "พอร์ตหลัก") return row.in_portfolio;
+            if (membershipValue === "เฝ้าดูเติบโต") return row.in_growth_watchlist;
+            return !row.in_portfolio && !row.in_growth_watchlist;
+        }
+
+        function filteredRows() {
+            const tickerValue = tickerFilter.value.trim().toUpperCase();
+            const signalValue = signalFilter.value;
+            const rsiValue = rsiFilter.value;
+            const bandValue = bandFilter.value;
+            const membershipValue = membershipFilter.value;
+
+            return initialPayload.securities.filter((row) => {
+                if (tickerValue && !row.ticker.includes(tickerValue)) return false;
+                if (signalValue !== "All" && row.signal !== signalValue) return false;
+                if (rsiValue !== "All" && row.rsi_bucket !== rsiValue) return false;
+                if (bandValue !== "All" && row.price_band !== bandValue) return false;
+                if (!passesMembershipFilter(row, membershipValue)) return false;
+                return true;
+            });
+        }
+
+        function renderSummary(rows) {
+            const returns = rows.map((row) => row.return_pct).filter((value) => value !== null && value !== undefined);
+            const advancers = returns.filter((value) => value > 0).length;
+            const decliners = returns.filter((value) => value < 0).length;
+            const avgReturn = returns.length ? returns.reduce((sum, value) => sum + value, 0) / returns.length : 0;
+            const totalVolume = rows.reduce((sum, row) => sum + (row.volume || 0), 0);
+            const portfolioCount = rows.filter((row) => row.in_portfolio).length;
+            const breadthRatio = decliners ? advancers / decliners : advancers;
+
+            const cards = [
+                { label: "จำนวนหุ้นที่แสดง", value: rows.length, helper: "หลังใช้ตัวกรองแล้ว" },
+                { label: "หุ้นบวก", value: advancers, helper: "จำนวนหุ้นที่ราคาปรับขึ้น", tone: "positive" },
+                { label: "หุ้นลบ", value: decliners, helper: "จำนวนหุ้นที่ราคาปรับลง", tone: "negative" },
+                { label: "ผลตอบแทนเฉลี่ย", value: formatPercent(avgReturn), helper: `${advancers} บวก / ${decliners} ลบ`, tone: signedClass(avgReturn) },
+                { label: "อัตราส่วน Breadth", value: formatNumber(breadthRatio, 2), helper: "หุ้นบวกหารด้วยหุ้นลบ" },
+                { label: "ปริมาณรวม", value: formatVolume(totalVolume), helper: "มูลค่าการหมุนเวียนรวม" },
+                { label: "ซ้ำกับพอร์ตหลัก", value: portfolioCount, helper: "หุ้นที่อยู่ในพอร์ตโมเดลปัจจุบัน" }
+            ];
+
+            summaryGrid.innerHTML = cards.map((card) => `
+                <article class="metric-card ${card.tone || ""}">
+                    <span>${card.label}</span>
+                    <strong>${card.value}</strong>
+                    <small>${card.helper}</small>
+                </article>
+            `).join("");
+        }
+
+        function renderHighlights(rows) {
+            const sorted = [...rows].filter((row) => row.return_pct !== null && row.return_pct !== undefined)
+                .sort((a, b) => b.return_pct - a.return_pct);
+            const strongest = sorted[0];
+            const weakest = sorted[sorted.length - 1];
+            const highestVolume = [...rows].sort((a, b) => (b.volume || 0) - (a.volume || 0))[0];
+            const portfolioName = rows.find((row) => row.in_portfolio);
+
+            const items = [
+                { label: "บวกแรงสุด", ticker: strongest?.ticker, value: strongest ? formatPercent(strongest.return_pct) : "-" },
+                { label: "ลบแรงสุด", ticker: weakest?.ticker, value: weakest ? formatPercent(weakest.return_pct) : "-" },
+                { label: "ปริมาณสูงสุด", ticker: highestVolume?.ticker, value: highestVolume ? formatVolume(highestVolume.volume) : "-" },
+                { label: "หุ้นพอร์ตที่มองเห็น", ticker: portfolioName?.ticker || "ไม่มี", value: portfolioName ? portfolioName.signal : "ไม่พบหุ้นซ้ำ" }
+            ];
+
+            highlightRibbon.innerHTML = items.map((item) => `
+                <article class="highlight-card">
+                    <span>${item.label}</span>
+                    <strong>${item.ticker || "-"}</strong>
+                    <small>${item.value}</small>
+                </article>
+            `).join("");
+        }
+
+        function renderHeatmap(rows) {
+            const picked = [...rows]
+                .filter((row) => row.return_pct !== null && row.return_pct !== undefined)
+                .sort((a, b) => Math.abs(b.return_pct) - Math.abs(a.return_pct))
+                .slice(0, 24);
+
+            heatmapGrid.innerHTML = picked.map((row) => `
+                <button class="heatmap-tile ${signedClass(row.return_pct)}" type="button" data-ticker="${row.ticker}">
+                    <span>${row.ticker}</span>
+                    <strong>${formatPercent(row.return_pct)}</strong>
+                    <small>${row.signal}</small>
+                </button>
+            `).join("");
+        }
+
+        function renderScatter(rows) {
+            const picked = [...rows]
+                .filter((row) => row.return_pct !== null && row.return_pct !== undefined && row.range_pct !== null && row.range_pct !== undefined)
+                .sort((a, b) => (b.volume || 0) - (a.volume || 0))
+                .slice(0, 80);
+
+            const maxRange = Math.max(...picked.map((row) => row.range_pct || 0), 0.01);
+            const minReturn = Math.min(...picked.map((row) => row.return_pct || 0), -0.01);
+            const maxReturn = Math.max(...picked.map((row) => row.return_pct || 0), 0.01);
+            const maxVolume = Math.max(...picked.map((row) => row.volume || 0), 1);
+
+            const width = 620;
+            const height = 320;
+            const pad = 32;
+            const innerWidth = width - pad * 2;
+            const innerHeight = height - pad * 2;
+
+            const yZero = pad + (maxReturn / (maxReturn - minReturn || 1)) * innerHeight;
+
+            const bubbles = picked.map((row) => {
+                const x = pad + ((row.range_pct || 0) / maxRange) * innerWidth;
+                const y = pad + ((maxReturn - (row.return_pct || 0)) / (maxReturn - minReturn || 1)) * innerHeight;
+                const radius = 4 + ((row.volume || 0) / maxVolume) * 16;
+                return `
+                    <g class="scatter-point">
+                        <circle cx="${x}" cy="${y}" r="${radius}" class="${signedClass(row.return_pct)}"></circle>
+                        <title>${row.ticker}: ผลตอบแทน ${formatPercent(row.return_pct)}, ช่วงแกว่ง ${formatPercent(row.range_pct)}</title>
+                    </g>
+                `;
+            }).join("");
+
+            scatterChart.innerHTML = `
+                <line x1="${pad}" y1="${yZero}" x2="${width - pad}" y2="${yZero}" class="scatter-axis"></line>
+                <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" class="scatter-axis"></line>
+                ${bubbles}
+                <text x="${pad}" y="20" class="scatter-label">ผลตอบแทน</text>
+                <text x="${width - 160}" y="${height - 10}" class="scatter-label">ช่วงแกว่งระหว่างวัน</text>
+            `;
+        }
+
+        function renderMovers(rows) {
+            const winners = [...rows]
+                .filter((row) => row.return_pct !== null && row.return_pct !== undefined)
+                .sort((a, b) => b.return_pct - a.return_pct)
+                .slice(0, 5);
+            const losers = [...rows]
+                .filter((row) => row.return_pct !== null && row.return_pct !== undefined)
+                .sort((a, b) => a.return_pct - b.return_pct)
+                .slice(0, 5);
+
+            const blocks = [...winners, ...losers];
+            const maxAbs = Math.max(...blocks.map((row) => Math.abs(row.return_pct || 0)), 0.01);
+
+            moversChart.innerHTML = blocks.map((row) => `
+                <div class="bar-row">
+                    <span>${row.ticker}</span>
+                    <div class="bar-track">
+                        <div class="bar-fill ${signedClass(row.return_pct)}" style="width:${(Math.abs(row.return_pct || 0) / maxAbs) * 100}%"></div>
+                    </div>
+                    <strong class="${signedClass(row.return_pct)}">${formatPercent(row.return_pct)}</strong>
+                </div>
+            `).join("");
+        }
+
+        function renderMostActive(rows) {
+            const activeRows = [...rows]
+                .sort((a, b) => (b.volume || 0) - (a.volume || 0))
+                .slice(0, 8);
+            const maxVolume = Math.max(...activeRows.map((row) => row.volume || 0), 1);
+
+            mostActiveChart.innerHTML = activeRows.map((row) => `
+                <div class="bar-row">
+                    <span>${row.ticker}</span>
+                    <div class="bar-track">
+                        <div class="bar-fill ${signedClass(row.return_pct || 0)}" style="width:${((row.volume || 0) / maxVolume) * 100}%"></div>
+                    </div>
+                    <strong class="${signedClass(row.return_pct || 0)}">${formatVolume(row.volume)}</strong>
+                </div>
+            `).join("");
+        }
+
+        function renderMix(rows) {
+            const signalCounts = {};
+            const rsiCounts = {};
+
+            rows.forEach((row) => {
+                signalCounts[row.signal] = (signalCounts[row.signal] || 0) + 1;
+                rsiCounts[row.rsi_bucket] = (rsiCounts[row.rsi_bucket] || 0) + 1;
+            });
+
+            signalMix.innerHTML = Object.entries(signalCounts).map(([label, count]) => `
+                <div class="mix-card">
+                    <span>${label}</span>
+                    <strong>${count}</strong>
+                </div>
+            `).join("");
+
+            rsiMix.innerHTML = Object.entries(rsiCounts).map(([label, count]) => `
+                <div class="mix-card subtle">
+                    <span>${label}</span>
+                    <strong>${count}</strong>
+                </div>
+            `).join("");
+        }
+
+        function renderTable(rows) {
+            const topRows = [...rows]
+                .sort((a, b) => Math.abs(b.return_pct || 0) - Math.abs(a.return_pct || 0))
+                .slice(0, 50);
+
+            tableCaption.textContent = `กำลังแสดง ${topRows.length} หุ้น จากทั้งหมด ${rows.length} แถวที่ผ่านตัวกรอง`;
+            marketTableBody.innerHTML = topRows.map((row) => `
+                <tr>
+                    <td class="ticker-cell">${row.ticker}</td>
+                    <td>${row.signal}</td>
+                    <td class="${signedClass(row.return_pct)}">${formatPercent(row.return_pct)}</td>
+                    <td>${formatPercent(row.range_pct)}</td>
+                    <td>${formatNumber(row.close)}</td>
+                    <td>${formatVolume(row.volume)}</td>
+                    <td>${formatNumber(row.rsi_14)}</td>
+                    <td>${formatNumber(row.macd_12_26_9, 3)}</td>
+                    <td>${row.price_band}</td>
+                    <td>${row.in_portfolio ? "พอร์ตหลัก " : ""}${row.in_growth_watchlist ? "เฝ้าดูเติบโต" : row.in_portfolio ? "" : "ทั่วไป"}</td>
+                </tr>
+            `).join("");
+        }
+
+        function renderAll() {
+            const rows = filteredRows();
+            renderSummary(rows);
+            renderHighlights(rows);
+            renderHeatmap(rows);
+            renderScatter(rows);
+            renderMovers(rows);
+            renderMostActive(rows);
+            renderMix(rows);
+            renderTable(rows);
+        }
+
+        [tickerFilter, signalFilter, rsiFilter, bandFilter, membershipFilter].forEach((node) => {
+            node.addEventListener("input", renderAll);
+            node.addEventListener("change", renderAll);
+        });
+
+        resetFilters.addEventListener("click", () => {
+            tickerFilter.value = "";
+            signalFilter.value = "All";
+            rsiFilter.value = "All";
+            bandFilter.value = "All";
+            membershipFilter.value = "All";
+            renderAll();
+        });
+
+        renderAll();
+    </script>
+</body>
+</html>

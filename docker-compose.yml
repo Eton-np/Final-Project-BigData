@@ -1,0 +1,190 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+
+  airflow-init:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/project/dags
+      PYTHONPATH: /opt/airflow/project/jobs
+      PROJECT_ROOT: /opt/airflow/project
+      RAW_INPUT_PATH: /opt/airflow/project/Data/StockHistory/*.csv
+      RAW_INPUT_MAX_FILES: 10
+      RAW_INPUT_YEARS_BACK: 2
+      PARQUET_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks
+      CLEAN_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks_clean
+      INDICATOR_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks_indicators
+      PORTFOLIO_OUTPUT_PATH: /opt/airflow/project/output/parquet/portfolio
+      EXPORT_OUTPUT_PATH: /opt/airflow/project/output/exports/final_portfolio.csv
+      GROWTH_START_END_OUTPUT_PATH: /opt/airflow/project/output/parquet/growth_start_end
+      GROWTH_CAGR_OUTPUT_PATH: /opt/airflow/project/output/parquet/growth_cagr
+      GROWTH_RANKED_OUTPUT_PATH: /opt/airflow/project/output/parquet/growth_ranked
+      GROWTH_EXPORT_OUTPUT_PATH: /opt/airflow/project/output/exports/Top20_Growth_Portfolio.csv
+      MARKET_DASHBOARD_OUTPUT_PATH: /opt/airflow/project/output/exports/market_dashboard.json
+      INVESTMENT_INSIGHTS_OUTPUT_PATH: /opt/airflow/project/output/exports/investment_insights.json
+      PORTFOLIO_SIZE: 10
+      GROWTH_MINIMUM_YEARS: 1
+      SPARK_SQL_SHUFFLE_PARTITIONS: 48
+      SPARK_BINARY: spark-submit
+      PYTHON_BINARY: python
+      SPARK_MASTER_URL: local[1]
+      AIRFLOW_SPARK_TASK_MODE: bash
+      GROWTH_MINIMUM_PRICE: 5
+      AIRFLOW_UID: 50000
+    command: >
+      bash -lc "
+      airflow db migrate &&
+      airflow users create
+      --username airflow
+      --firstname Airflow
+      --lastname Admin
+      --role Admin
+      --email airflow@example.com
+      --password airflow || true
+      "
+    volumes:
+      - ./:/opt/airflow/project
+      - airflow-home:/opt/airflow
+
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/project/dags
+      PYTHONPATH: /opt/airflow/project/jobs
+      PROJECT_ROOT: /opt/airflow/project
+      RAW_INPUT_PATH: /opt/airflow/project/Data/StockHistory/*.csv
+      RAW_INPUT_MAX_FILES: 10
+      RAW_INPUT_YEARS_BACK: 2
+      PARQUET_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks
+      CLEAN_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks_clean
+      INDICATOR_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks_indicators
+      PORTFOLIO_OUTPUT_PATH: /opt/airflow/project/output/parquet/portfolio
+      EXPORT_OUTPUT_PATH: /opt/airflow/project/output/exports/final_portfolio.csv
+      GROWTH_START_END_OUTPUT_PATH: /opt/airflow/project/output/parquet/growth_start_end
+      GROWTH_CAGR_OUTPUT_PATH: /opt/airflow/project/output/parquet/growth_cagr
+      GROWTH_RANKED_OUTPUT_PATH: /opt/airflow/project/output/parquet/growth_ranked
+      GROWTH_EXPORT_OUTPUT_PATH: /opt/airflow/project/output/exports/Top20_Growth_Portfolio.csv
+      MARKET_DASHBOARD_OUTPUT_PATH: /opt/airflow/project/output/exports/market_dashboard.json
+      INVESTMENT_INSIGHTS_OUTPUT_PATH: /opt/airflow/project/output/exports/investment_insights.json
+      PORTFOLIO_SIZE: 10
+      GROWTH_MINIMUM_YEARS: 1
+      SPARK_SQL_SHUFFLE_PARTITIONS: 48
+      SPARK_BINARY: spark-submit
+      PYTHON_BINARY: python
+      SPARK_MASTER_URL: local[1]
+      AIRFLOW_SPARK_TASK_MODE: bash
+      GROWTH_MINIMUM_PRICE: 5
+    command: webserver
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./:/opt/airflow/project
+      - airflow-home:/opt/airflow
+
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/project/dags
+      PYTHONPATH: /opt/airflow/project/jobs
+      PROJECT_ROOT: /opt/airflow/project
+      RAW_INPUT_PATH: /opt/airflow/project/Data/StockHistory/*.csv
+      RAW_INPUT_MAX_FILES: 10
+      RAW_INPUT_YEARS_BACK: 2
+      PARQUET_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks
+      CLEAN_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks_clean
+      INDICATOR_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks_indicators
+      PORTFOLIO_OUTPUT_PATH: /opt/airflow/project/output/parquet/portfolio
+      EXPORT_OUTPUT_PATH: /opt/airflow/project/output/exports/final_portfolio.csv
+      GROWTH_START_END_OUTPUT_PATH: /opt/airflow/project/output/parquet/growth_start_end
+      GROWTH_CAGR_OUTPUT_PATH: /opt/airflow/project/output/parquet/growth_cagr
+      GROWTH_RANKED_OUTPUT_PATH: /opt/airflow/project/output/parquet/growth_ranked
+      GROWTH_EXPORT_OUTPUT_PATH: /opt/airflow/project/output/exports/Top20_Growth_Portfolio.csv
+      MARKET_DASHBOARD_OUTPUT_PATH: /opt/airflow/project/output/exports/market_dashboard.json
+      INVESTMENT_INSIGHTS_OUTPUT_PATH: /opt/airflow/project/output/exports/investment_insights.json
+      PORTFOLIO_SIZE: 10
+      GROWTH_MINIMUM_YEARS: 1
+      SPARK_SQL_SHUFFLE_PARTITIONS: 48
+      SPARK_BINARY: spark-submit
+      PYTHON_BINARY: python
+      SPARK_MASTER_URL: local[1]
+      AIRFLOW_SPARK_TASK_MODE: bash
+      GROWTH_MINIMUM_PRICE: 5
+    command: scheduler
+    volumes:
+      - ./:/opt/airflow/project
+      - airflow-home:/opt/airflow
+
+  dashboard:
+    image: python:3.11-slim
+    working_dir: /app
+    command: >
+      bash -lc "
+      pip install --no-cache-dir fastapi==0.115.12 uvicorn==0.34.0 jinja2==3.1.6 &&
+      uvicorn web.app:app --host 0.0.0.0 --port 8000
+      "
+    environment:
+      PROJECT_ROOT: /app
+      RAW_INPUT_PATH: /app/Data/StockHistory/*.csv
+      RAW_INPUT_MAX_FILES: 10
+      RAW_INPUT_YEARS_BACK: 2
+      PARQUET_OUTPUT_PATH: /app/output/parquet/stocks
+      CLEAN_OUTPUT_PATH: /app/output/parquet/stocks_clean
+      INDICATOR_OUTPUT_PATH: /app/output/parquet/stocks_indicators
+      PORTFOLIO_OUTPUT_PATH: /app/output/parquet/portfolio
+      EXPORT_OUTPUT_PATH: /app/output/exports/final_portfolio.csv
+      GROWTH_START_END_OUTPUT_PATH: /app/output/parquet/growth_start_end
+      GROWTH_CAGR_OUTPUT_PATH: /app/output/parquet/growth_cagr
+      GROWTH_RANKED_OUTPUT_PATH: /app/output/parquet/growth_ranked
+      GROWTH_EXPORT_OUTPUT_PATH: /app/output/exports/Top20_Growth_Portfolio.csv
+      MARKET_DASHBOARD_OUTPUT_PATH: /app/output/exports/market_dashboard.json
+      INVESTMENT_INSIGHTS_OUTPUT_PATH: /app/output/exports/investment_insights.json
+      PORTFOLIO_SIZE: 10
+      GROWTH_MINIMUM_YEARS: 1
+      GROWTH_MINIMUM_PRICE: 5
+      SPARK_SQL_SHUFFLE_PARTITIONS: 48
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+
+volumes:
+  postgres-db-volume:
+  airflow-home:

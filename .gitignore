@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.venv/
+.venv-airflow/
+.env
+output/
+logs/
+airflow_home/
+airflow_home_local/
+.DS_Store
+web/__pycache__/
+Data/
+Stock_List.csv
