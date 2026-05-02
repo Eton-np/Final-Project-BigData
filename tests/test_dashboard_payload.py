@@ -12,6 +12,9 @@ def test_dashboard_payload_shape() -> None:
     assert "scatter" in payload
     assert isinstance(payload["securities"], list)
     assert isinstance(payload["summary"], dict)
+    assert "selected_year" in payload["summary"]
+    assert "years" in payload["filters"]
+    assert 10 in payload["filters"]["lookback_years"]
 
 
 def test_growth_dashboard_payload_shape() -> None:

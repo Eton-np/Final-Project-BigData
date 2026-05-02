@@ -12,6 +12,7 @@ from common import (
     DEFAULT_PORTFOLIO_OUTPUT,
     build_argument_parser,
     create_spark,
+    spark_path,
 )
 
 
@@ -60,11 +61,11 @@ def main() -> None:
 
     spark = create_spark(args.app_name)
     # เรียงลำดับข้อมูลก่อน export เพื่อให้ไฟล์ที่ได้อ่านง่ายและผลลัพธ์คงที่
-    df = spark.read.parquet(args.input_path).orderBy("Year", "Month", "selection_rank", "Ticker")
+    df = spark.read.parquet(spark_path(args.input_path)).orderBy("Year", "Month", "selection_rank", "Ticker")
 
     # Spark เขียน CSV ออกมาเป็นโฟลเดอร์
     # จึงใช้ coalesce(1) เพื่อบังคับให้เหลือไฟล์ part เดียว แล้วค่อย rename เป็นไฟล์ปลายทางจริง
-    df.coalesce(1).write.mode("overwrite").option("header", True).csv(str(temp_dir))
+    df.coalesce(1).write.mode("overwrite").option("header", True).csv(spark_path(temp_dir))
 
     part_file = next(temp_dir.glob("part-*.csv"))
     shutil.move(str(part_file), str(output_file))

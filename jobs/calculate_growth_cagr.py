@@ -10,6 +10,7 @@ from common import (
     DEFAULT_GROWTH_START_END_OUTPUT,
     build_argument_parser,
     create_spark,
+    spark_path,
 )
 
 
@@ -20,7 +21,7 @@ def main() -> None:
     args = parser.parse_args()
 
     spark = create_spark(args.app_name)
-    df = spark.read.parquet(args.input_path)
+    df = spark.read.parquet(spark_path(args.input_path))
 
     # Years_Active คำนวณเป็นจำนวนปีแบบประมาณค่าเศษส่วน เพื่อให้สูตร CAGR ทำงานต่อเนื่อง
     years_active = F.datediff(F.col("End_Date"), F.col("Start_Date")) / F.lit(365.25)
@@ -38,7 +39,7 @@ def main() -> None:
         )
     )
 
-    result.write.mode("overwrite").parquet(args.output_path)
+    result.write.mode("overwrite").parquet(spark_path(args.output_path))
     spark.stop()
 
 

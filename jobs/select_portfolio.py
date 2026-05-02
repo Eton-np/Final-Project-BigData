@@ -13,6 +13,7 @@ from common import (
     DEFAULT_PORTFOLIO_OUTPUT,
     build_argument_parser,
     create_spark,
+    spark_path,
 )
 
 
@@ -24,7 +25,7 @@ def main() -> None:
     args = parser.parse_args()
 
     spark = create_spark(args.app_name)
-    df = spark.read.parquet(args.input_path)
+    df = spark.read.parquet(spark_path(args.input_path))
 
     # month_end_window ใช้เก็บแค่แถวล่าสุดของแต่ละ ticker ในแต่ละเดือน
     # เพื่อให้การคัดเลือกอ้างอิง snapshot ตัวแทนของเดือนนั้นเพียงแถวเดียว
@@ -77,7 +78,7 @@ def main() -> None:
     (
         selected.write.mode("overwrite")
         .partitionBy("Year", "Month")
-        .parquet(args.output_path)
+        .parquet(spark_path(args.output_path))
     )
 
     spark.stop()

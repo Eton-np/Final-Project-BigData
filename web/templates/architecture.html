@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Big Data / ETL Data Pipeline Architecture Diagram</title>
+    <link rel="stylesheet" href="/static/styles.css?v=20260427e">
+</head>
+<body>
+    <main class="page-shell architecture-page">
+        <section class="topbar">
+            <div>
+                <p class="kicker">README Workflow Diagram</p>
+                <h1>Architecture Diagram</h1>
+            </div>
+            <nav class="page-links">
+                <a href="/">ภาพรวมตลาด</a>
+                <a href="/insights">สัญญาณการลงทุน</a>
+                <a href="/architecture" class="active">Architecture</a>
+            </nav>
+        </section>
+
+        <p class="architecture-subtitle">
+            เส้นทางข้อมูลจริงของ DAG: StockHistory CSV ถูกแปลงเป็น Parquet, DAG 1/2 สร้าง portfolio และ growth outputs, DAG 3 อ่าน Parquet เหล่านั้นเพื่อสร้าง JSON snapshots ให้หน้า Dashboard
+        </p>
+
+        <section class="diagram-board">
+            <svg class="architecture-diagram" viewBox="0 0 1440 1230" role="img" aria-label="Stock portfolio architecture and workflow diagram">
+                <defs>
+                    <marker id="arrow" markerWidth="15" markerHeight="15" refX="12" refY="7.5" orient="auto" markerUnits="userSpaceOnUse">
+                        <path d="M1.5,1.5 L11,6.5 L1.5,11.5 Z" fill="#f8fdff"></path>
+                    </marker>
+                    <marker id="arrow-dash" markerWidth="15" markerHeight="15" refX="12" refY="7.5" orient="auto" markerUnits="userSpaceOnUse">
+                        <path d="M1.5,1.5 L11,6.5 L1.5,11.5 Z" fill="#70d7ff"></path>
+                    </marker>
+                    <linearGradient id="sourceBox" x1="0" x2="1">
+                        <stop offset="0" stop-color="#254b63"></stop>
+                        <stop offset="1" stop-color="#355f75"></stop>
+                    </linearGradient>
+                    <linearGradient id="jobBox" x1="0" x2="1">
+                        <stop offset="0" stop-color="#ff8425"></stop>
+                        <stop offset="1" stop-color="#ffbb58"></stop>
+                    </linearGradient>
+                    <linearGradient id="apiBox" x1="0" x2="1">
+                        <stop offset="0" stop-color="#7134ff"></stop>
+                        <stop offset="1" stop-color="#d62cff"></stop>
+                    </linearGradient>
+                    <linearGradient id="dataBox" x1="0" x2="1">
+                        <stop offset="0" stop-color="#48e768"></stop>
+                        <stop offset="1" stop-color="#25c75b"></stop>
+                    </linearGradient>
+                </defs>
+
+                <rect x="28" y="24" width="1384" height="1182" rx="22" class="diagram-frame"></rect>
+
+                <text x="720" y="72" class="diagram-title" text-anchor="middle">Stock Portfolio Pipeline</text>
+                <text x="720" y="106" class="diagram-caption" text-anchor="middle">
+                    StockHistory CSV -> Parquet -> DAG 1 Portfolio + DAG 2 Growth -> DAG 3 JSON Snapshots -> FastAPI Dashboard
+                </text>
+
+                <g class="group-box source-group">
+                    <rect x="420" y="136" width="600" height="118" rx="10"></rect>
+                    <text x="720" y="166" text-anchor="middle" class="group-title">1. Data Source</text>
+                    <rect x="470" y="188" width="250" height="44" rx="5" fill="url(#sourceBox)" class="node-stroke"></rect>
+                    <text x="595" y="216" text-anchor="middle" class="node-text">Data/StockHistory/*.csv</text>
+                    <rect x="760" y="188" width="250" height="44" rx="5" fill="url(#sourceBox)" class="node-stroke"></rect>
+                    <text x="885" y="207" text-anchor="middle" class="node-text">Todays_stocks.csv</text>
+                    <text x="885" y="226" text-anchor="middle" class="step-label">CSV fallback only</text>
+                </g>
+
+                <g class="group-box pipeline-group">
+                    <rect x="70" y="286" width="1300" height="710" rx="10"></rect>
+                    <text x="720" y="322" text-anchor="middle" class="group-title">2. Apache Airflow + PySpark Data Pipelines</text>
+                </g>
+
+                <text x="720" y="350" text-anchor="middle" class="step-label">Shared preparation: DAG 1 builds indicators, DAG 2 reuses clean data</text>
+                <text x="720" y="370" text-anchor="middle" class="step-label">DAG 3 reuses the best available Parquet snapshot</text>
+
+                <g class="job-node">
+                    <rect x="190" y="382" width="240" height="48" rx="6" fill="url(#jobBox)" class="node-stroke"></rect>
+                    <text x="310" y="412" text-anchor="middle" class="job-text">csv_to_parquet.py</text>
+                </g>
+
+                <g class="job-node">
+                    <rect x="600" y="382" width="240" height="48" rx="6" fill="url(#jobBox)" class="node-stroke"></rect>
+                    <text x="720" y="412" text-anchor="middle" class="job-text">cleanse_data.py</text>
+                </g>
+
+                <g class="job-node">
+                    <rect x="1010" y="382" width="260" height="48" rx="6" fill="url(#jobBox)" class="node-stroke"></rect>
+                    <text x="1140" y="412" text-anchor="middle" class="job-text">calculate_indicators.py</text>
+                </g>
+
+                <g class="data-node">
+                    <ellipse cx="310" cy="490" rx="138" ry="24" fill="url(#dataBox)" class="data-stroke"></ellipse>
+                    <rect x="172" y="490" width="276" height="64" fill="url(#dataBox)" class="data-stroke no-top"></rect>
+                    <ellipse cx="310" cy="554" rx="138" ry="24" fill="url(#dataBox)" class="data-stroke"></ellipse>
+                    <text x="310" y="519" text-anchor="middle" class="data-text">output/parquet/stocks</text>
+                </g>
+
+                <g class="data-node">
+                    <ellipse cx="720" cy="490" rx="138" ry="24" fill="url(#dataBox)" class="data-stroke"></ellipse>
+                    <rect x="582" y="490" width="276" height="64" fill="url(#dataBox)" class="data-stroke no-top"></rect>
+                    <ellipse cx="720" cy="554" rx="138" ry="24" fill="url(#dataBox)" class="data-stroke"></ellipse>
+                    <text x="720" y="519" text-anchor="middle" class="data-text">output/parquet/stocks_clean</text>
+                </g>
+
+                <g class="data-node">
+                    <ellipse cx="1140" cy="490" rx="156" ry="24" fill="url(#dataBox)" class="data-stroke"></ellipse>
+                    <rect x="984" y="490" width="312" height="64" fill="url(#dataBox)" class="data-stroke no-top"></rect>
+                    <ellipse cx="1140" cy="554" rx="156" ry="24" fill="url(#dataBox)" class="data-stroke"></ellipse>
+                    <text x="1140" y="519" text-anchor="middle" class="data-text">output/parquet/stocks_indicators</text>
+                </g>
+
+                <g class="group-box">
+                    <rect x="105" y="618" width="360" height="330" rx="10"></rect>
+                    <text x="285" y="648" text-anchor="middle" class="group-title">DAG 1: stock_portfolio_pipeline</text>
+                    <rect x="160" y="672" width="250" height="44" rx="6" fill="url(#jobBox)" class="node-stroke"></rect>
+                    <text x="285" y="708" text-anchor="middle" class="job-text">select_portfolio.py</text>
+                    <ellipse cx="285" cy="766" rx="138" ry="20" fill="url(#dataBox)" class="data-stroke"></ellipse>
+                    <rect x="147" y="766" width="276" height="48" fill="url(#dataBox)" class="data-stroke no-top"></rect>
+                    <ellipse cx="285" cy="814" rx="138" ry="20" fill="url(#dataBox)" class="data-stroke"></ellipse>
+                    <text x="285" y="796" text-anchor="middle" class="data-text">output/parquet/portfolio</text>
+                    <rect x="160" y="842" width="250" height="44" rx="6" fill="url(#jobBox)" class="node-stroke"></rect>
+                    <text x="285" y="870" text-anchor="middle" class="job-text">export_portfolio.py</text>
+                    <rect x="160" y="906" width="250" height="34" rx="6" fill="url(#sourceBox)" class="node-stroke"></rect>
+                    <text x="285" y="928" text-anchor="middle" class="node-text">final_portfolio.csv</text>
+                </g>
+
+                <g class="group-box">
+                    <rect x="540" y="618" width="360" height="330" rx="10"></rect>
+                    <text x="720" y="648" text-anchor="middle" class="group-title">DAG 2: growth_portfolio_pipeline</text>
+                    <rect x="585" y="672" width="270" height="44" rx="6" fill="url(#jobBox)" class="node-stroke"></rect>
+                    <text x="720" y="699" text-anchor="middle" class="job-text">extract_growth_start_end.py</text>
+                    <text x="720" y="718" text-anchor="middle" class="job-text">calculate_growth_cagr.py</text>
+                    <rect x="585" y="734" width="270" height="44" rx="6" fill="url(#jobBox)" class="node-stroke"></rect>
+                    <text x="720" y="762" text-anchor="middle" class="job-text">filter_rank_growth.py</text>
+                    <ellipse cx="720" cy="826" rx="138" ry="20" fill="url(#dataBox)" class="data-stroke"></ellipse>
+                    <rect x="582" y="826" width="276" height="48" fill="url(#dataBox)" class="data-stroke no-top"></rect>
+                    <ellipse cx="720" cy="874" rx="138" ry="20" fill="url(#dataBox)" class="data-stroke"></ellipse>
+                    <text x="720" y="856" text-anchor="middle" class="data-text">output/parquet/growth_ranked</text>
+                    <rect x="585" y="894" width="270" height="34" rx="6" fill="url(#jobBox)" class="node-stroke"></rect>
+                    <text x="720" y="916" text-anchor="middle" class="job-text">export_growth_portfolio.py</text>
+                    <rect x="585" y="932" width="270" height="34" rx="6" fill="url(#sourceBox)" class="node-stroke"></rect>
+                    <text x="720" y="954" text-anchor="middle" class="node-text">Top20_Growth_Portfolio.csv</text>
+                </g>
+
+                <g class="group-box">
+                    <rect x="975" y="618" width="360" height="330" rx="10"></rect>
+                    <text x="1155" y="648" text-anchor="middle" class="group-title">DAG 3: dashboard_refresh_pipeline</text>
+                    <rect x="1020" y="680" width="270" height="44" rx="6" fill="url(#jobBox)" class="node-stroke"></rect>
+                    <text x="1155" y="699" text-anchor="middle" class="job-text">dashboard_datasets.py</text>
+                    <text x="1155" y="718" text-anchor="middle" class="job-text">dashboard_snapshot_spark.py</text>
+                    <rect x="1000" y="748" width="310" height="42" rx="6" fill="url(#jobBox)" class="node-stroke"></rect>
+                    <text x="1155" y="775" text-anchor="middle" class="job-text">build_market_dashboard_data.py</text>
+                    <rect x="1000" y="820" width="310" height="42" rx="6" fill="url(#jobBox)" class="node-stroke"></rect>
+                    <text x="1155" y="847" text-anchor="middle" class="job-text">build_investment_insights.py</text>
+                    <rect x="1000" y="894" width="310" height="34" rx="6" fill="url(#sourceBox)" class="node-stroke"></rect>
+                    <text x="1155" y="916" text-anchor="middle" class="node-text">market_dashboard.json</text>
+                    <rect x="1000" y="936" width="310" height="34" rx="6" fill="url(#sourceBox)" class="node-stroke"></rect>
+                    <text x="1155" y="958" text-anchor="middle" class="node-text">investment_insights.json</text>
+                </g>
+
+                <g class="group-box api-group">
+                    <rect x="180" y="1010" width="1080" height="172" rx="10"></rect>
+                    <text x="720" y="1034" text-anchor="middle" class="group-title">3. FastAPI Backend + Web Dashboard</text>
+                </g>
+
+                <rect x="245" y="1058" width="390" height="32" rx="6" fill="url(#sourceBox)" class="node-stroke"></rect>
+                <text x="440" y="1079" class="node-text" text-anchor="middle">market_dashboard.json -> overview payload</text>
+                <rect x="805" y="1058" width="390" height="32" rx="6" fill="url(#sourceBox)" class="node-stroke"></rect>
+                <text x="1000" y="1079" class="node-text" text-anchor="middle">investment_insights.json -> insights payload</text>
+                <rect x="245" y="1110" width="150" height="34" rx="6" fill="url(#apiBox)" class="node-stroke api-node"></rect>
+                <text x="320" y="1132" text-anchor="middle" class="api-text">GET /</text>
+                <rect x="430" y="1110" width="205" height="34" rx="6" fill="url(#apiBox)" class="node-stroke api-node"></rect>
+                <text x="532" y="1132" text-anchor="middle" class="api-text">GET /api/portfolio</text>
+                <rect x="805" y="1110" width="160" height="34" rx="6" fill="url(#apiBox)" class="node-stroke api-node"></rect>
+                <text x="885" y="1132" text-anchor="middle" class="api-text">GET /insights</text>
+                <rect x="985" y="1110" width="230" height="34" rx="6" fill="url(#apiBox)" class="node-stroke api-node"></rect>
+                <text x="1100" y="1132" text-anchor="middle" class="api-text">GET /api/investment-insights</text>
+                <text x="720" y="1168" text-anchor="middle" class="step-label">Legacy aliases: GET /growth and GET /api/growth-portfolio return the same insights payload</text>
+
+                <path d="M595 232 C552 290 390 322 320 382" class="flow-line"></path>
+                <text x="420" y="300" class="step-label" text-anchor="middle">Read raw CSV</text>
+                <path d="M430 406 L600 406" class="flow-line"></path>
+                <path d="M840 406 L1010 406" class="flow-line"></path>
+                <path d="M310 430 L310 490" class="flow-line"></path>
+                <path d="M720 430 L720 490" class="flow-line"></path>
+                <path d="M1140 430 L1140 490" class="flow-line"></path>
+                <text x="720" y="458" class="step-label" text-anchor="middle">Write and reuse Parquet datasets</text>
+
+                <path d="M1140 554 C938 596 506 608 285 680" class="flow-line"></path>
+                <path d="M720 554 C720 604 720 634 720 680" class="flow-line"></path>
+                <path d="M1140 554 L1155 680" class="flow-line dashed"></path>
+                <text x="960" y="606" class="step-label" text-anchor="middle">DAG 3 prefers indicators, then clean/raw Parquet if needed</text>
+
+                <path d="M285 716 L285 766" class="flow-line"></path>
+                <path d="M285 814 L285 842" class="flow-line"></path>
+                <path d="M285 886 L285 906" class="flow-line"></path>
+                <text x="212" y="752" class="step-label" text-anchor="middle">DAG 1 output</text>
+
+                <path d="M720 716 L720 734" class="flow-line"></path>
+                <path d="M720 778 L720 826" class="flow-line"></path>
+                <path d="M720 874 L720 894" class="flow-line"></path>
+                <path d="M720 928 L720 932" class="flow-line"></path>
+                <text x="806" y="820" class="step-label" text-anchor="middle">DAG 2 output</text>
+
+                <path d="M423 790 C610 800 815 735 1020 708" class="flow-line dashed"></path>
+                <path d="M858 850 C942 836 998 812 1050 790" class="flow-line dashed"></path>
+                <text x="960" y="812" class="step-label" text-anchor="middle">Enrich with portfolio + growth_ranked</text>
+                <path d="M1155 724 L1155 748" class="flow-line"></path>
+                <path d="M1155 790 L1155 820" class="flow-line"></path>
+                <path d="M1040 790 C952 812 950 888 1000 911" class="flow-line"></path>
+                <path d="M1190 862 L1190 936" class="flow-line"></path>
+
+                <path d="M1155 970 L1155 1010" class="flow-line dashed"></path>
+            </svg>
+        </section>
+    </main>
+</body>
+</html>

@@ -5,11 +5,14 @@ __pycache__/
 .venv/
 .venv-airflow/
 .env
+Data/
+Stock_List.csv
 output/
 logs/
 airflow_home/
 airflow_home_local/
+.hadoop/
+architecture-check*.png
+AIRFLOW_HANDOFF.md
 .DS_Store
 web/__pycache__/
-Data/
-Stock_List.csv

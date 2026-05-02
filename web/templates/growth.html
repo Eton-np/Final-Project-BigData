@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>สัญญาณการลงทุน</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260411b">
+    <link rel="stylesheet" href="/static/styles.css?v=20260420a">
 </head>
 <body>
     <main class="page-shell">
@@ -16,6 +16,7 @@
             <nav class="page-links">
                 <a href="/">ภาพรวมตลาด</a>
                 <a href="/insights" class="active">สัญญาณการลงทุน</a>
+                <a href="/architecture">Architecture</a>
             </nav>
         </section>
 
@@ -34,7 +35,7 @@
                     </div>
                     <div>
                         <span>จัดเตรียมเมื่อ</span>
-                        <strong>{{ payload.generated_at }}</strong>
+                        <strong>{{ payload.generated_at or "ยังไม่มี snapshot" }}</strong>
                     </div>
                 </div>
             </article>
@@ -73,8 +74,8 @@
 
         <section class="metric-grid" id="insight-summary-grid"></section>
 
-        <section class="visual-grid">
-            <article class="viz-card">
+        <section class="visual-grid insight-overview-grid">
+            <article class="viz-card distribution-card">
                 <div class="panel-heading">
                     <h3>สัดส่วนคะแนน</h3>
                     <p>การกระจายตัวของ snapshot ล่าสุดตามป้ายกำกับแต่ละแบบ</p>
@@ -82,7 +83,7 @@
                 <div id="score-distribution" class="mix-grid"></div>
             </article>
 
-            <article class="viz-card">
+            <article class="viz-card spotlight-panel">
                 <div class="panel-heading">
                     <h3>หุ้นเด่นน่าสนใจ</h3>
                     <p>หุ้นคะแนนสูงสุดหลังผ่านตัวกรอง</p>
@@ -91,8 +92,8 @@
             </article>
         </section>
 
-        <section class="visual-grid">
-            <article class="viz-card">
+        <section class="visual-grid insight-detail-grid">
+            <article class="viz-card ladder-panel">
                 <div class="panel-heading">
                     <h3>ลำดับคะแนน</h3>
                     <p>จัดอันดับอย่างรวดเร็วในรายการที่กรองแล้ว</p>
@@ -100,7 +101,7 @@
                 <div id="score-ladder" class="stacked-bars"></div>
             </article>
 
-            <article class="viz-card">
+            <article class="viz-card notes-panel">
                 <div class="panel-heading">
                     <h3>หมายเหตุของโมเดล</h3>
                     <p>ปัจจัยที่ผลักดันป้ายกำกับในตอนนี้</p>
@@ -207,15 +208,15 @@
 
             const cards = [
                 { label: "จำนวนหุ้นที่แสดง", value: rows.length, helper: "shortlist หลังใช้ตัวกรอง" },
-                { label: "คะแนนเฉลี่ย", value: formatNumber(avgScore, 2), helper: `${worthWatching} ตัวอยู่ในกลุ่มน่าจับตา` },
+                { label: "คะแนนเฉลี่ย", value: formatNumber(avgScore, 2), helper: `${worthWatching} ตัวอยู่ในกลุ่มน่าจับตา`, tone: "positive" },
                 { label: "ค่อนข้างนิ่ง", value: stable, helper: "ภาพรวมสมดุล" },
-                { label: "ควรระวัง", value: caution, helper: "หุ้นที่ควรบริหารความเสี่ยง" },
+                { label: "ควรระวัง", value: caution, helper: "หุ้นที่ควรบริหารความเสี่ยง", tone: "negative" },
                 { label: "ซ้ำกับพอร์ตหลัก", value: portfolioOverlap, helper: "หุ้นที่มีอยู่ในพอร์ตหลักแล้ว" },
                 { label: "ซ้ำกับกลุ่มเติบโต", value: growthOverlap, helper: "หุ้นที่อยู่ในรายชื่อเฝ้าดูเติบโตด้วย" }
             ];
 
             insightSummaryGrid.innerHTML = cards.map((card) => `
-                <article class="metric-card">
+                <article class="metric-card ${card.tone || ""}">
                     <span>${card.label}</span>
                     <strong>${card.value}</strong>
                     <small>${card.helper}</small>
@@ -238,20 +239,20 @@
         }
 
         function renderSpotlight(rows) {
-            spotlightCards.innerHTML = rows.slice(0, 6).map((row) => `
+            spotlightCards.innerHTML = rows.slice(0, 4).map((row) => `
                 <article class="spotlight-card ${toneClass(row.insight_label)}">
                     <div>
                         <span>${row.insight_label}</span>
                         <h4>${row.ticker}</h4>
                     </div>
-                    <strong>${formatNumber(row.insight_score, 2)}</strong>
+                    <strong>${formatNumber(row.insight_score, 1)}</strong>
                     <p>${row.reasons.join(" • ") || "ภาพรวมของ snapshot ปัจจุบันยังผสมกันอยู่"}</p>
                 </article>
             `).join("");
         }
 
         function renderLadder(rows) {
-            const topRows = rows.slice(0, 10);
+            const topRows = rows.slice(0, 8);
             const maxScore = Math.max(...topRows.map((row) => row.insight_score), 1);
 
             scoreLadder.innerHTML = topRows.map((row) => `

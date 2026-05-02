@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>แดชบอร์ดภาพรวมตลาด</title>
-    <link rel="stylesheet" href="/static/styles.css?v=20260411b">
+    <link rel="stylesheet" href="/static/styles.css?v=20260420a">
 </head>
 <body>
     <main class="page-shell">
@@ -16,25 +16,26 @@
             <nav class="page-links">
                 <a href="/" class="active">ภาพรวมตลาด</a>
                 <a href="/insights">สัญญาณการลงทุน</a>
+                <a href="/architecture">Architecture</a>
             </nav>
         </section>
 
         <section class="hero-grid">
             <article class="hero-panel hero-panel-market">
                 <p class="eyebrow">ความกว้างของตลาด</p>
-                <h2>ติดตามจังหวะล่าสุดของตลาดได้จากหน้าจอเดียว</h2>
+                <h2>ติดตามภาพตลาดแยกตามปีได้จากหน้าจอเดียว</h2>
                 <p class="hero-copy">
-                    หน้านี้ผสานภาพรวมตลาด โมเมนตัม ความเสี่ยง และการมีส่วนร่วมของหุ้นแต่ละตัว
-                    เพื่อให้เราไล่ดู snapshot ล่าสุดได้เร็ว ก่อนลงลึกรายตัว
+                    หน้านี้สรุปผลตอบแทนรายปีจาก StockHistory ถึงวันล่าสุดในไฟล์
+                    แล้วผสานกับพอร์ตและ watchlist ที่สร้างจาก pipeline เพื่อให้เราไล่ดูภาพใหญ่ก่อนลงลึกรายตัว
                 </p>
                 <div class="hero-meta">
                     <div>
-                        <span>ข้อมูล ณ วันที่</span>
+                        <span>ข้อมูลตลาดล่าสุดในไฟล์</span>
                         <strong id="data-as-of">{{ payload.data_as_of or "ยังไม่มี snapshot" }}</strong>
                     </div>
                     <div>
                         <span>จัดเตรียมเมื่อ</span>
-                        <strong id="generated-at">{{ payload.generated_at }}</strong>
+                        <strong id="generated-at">{{ payload.generated_at or "ยังไม่มี snapshot" }}</strong>
                     </div>
                 </div>
             </article>
@@ -48,6 +49,14 @@
                     <label>
                         <span>ค้นหา Ticker</span>
                         <input id="ticker-filter" type="search" placeholder="เช่น AAPL, MSFT, NVDA">
+                    </label>
+                    <label>
+                        <span>ปี</span>
+                        <select id="year-filter">
+                            {% for year in payload.filters.years or [] %}
+                            <option value="{{ year }}" {% if year == payload.summary.selected_year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
                     </label>
                     <label>
                         <span>สัญญาณ</span>
@@ -96,16 +105,16 @@
         <section class="visual-grid">
             <article class="viz-card">
                 <div class="panel-heading">
-                    <h3>ฮีตแมปผลตอบแทน</h3>
-                    <p>หุ้นที่เด่นที่สุดตามการเปลี่ยนแปลงราคาและปริมาณการซื้อขาย</p>
+                    <h3>ฮีตแมปผลตอบแทนรายปี</h3>
+                    <p>หุ้นที่ผลตอบแทนเด่นในปีที่เลือกและมีปริมาณซื้อขายพอใช้</p>
                 </div>
                 <div id="heatmap-grid" class="heatmap-grid"></div>
             </article>
 
             <article class="viz-card">
                 <div class="panel-heading">
-                    <h3>ความเสี่ยงเทียบผลตอบแทน</h3>
-                    <p>ขนาดวงกลมสะท้อนปริมาณการซื้อขาย</p>
+                    <h3>ช่วงแกว่งเทียบผลตอบแทน</h3>
+                    <p>ขนาดวงกลมสะท้อนปริมาณซื้อขายของวันสุดท้ายในปีที่เลือก</p>
                 </div>
                 <svg id="scatter-chart" viewBox="0 0 620 320" class="scatter-chart" aria-label="กราฟกระจายความเสี่ยงเทียบผลตอบแทน"></svg>
             </article>
@@ -114,8 +123,8 @@
         <section class="visual-grid">
             <article class="viz-card">
                 <div class="panel-heading">
-                    <h3>ตัวเคลื่อนไหวเด่น</h3>
-                    <p>หุ้นที่บวกแรงและลบแรงที่สุดใน snapshot ปัจจุบัน</p>
+                    <h3>ผลตอบแทนรายปีเด่น</h3>
+                    <p>หุ้นที่ผลตอบแทนสูงสุดและต่ำสุดในปีที่เลือก</p>
                 </div>
                 <div id="movers-chart" class="stacked-bars"></div>
             </article>
@@ -125,12 +134,14 @@
                     <h3>สัดส่วนสัญญาณ</h3>
                     <p>การกระจายตัวของบรรยากาศตลาดปัจจุบัน</p>
                 </div>
+                <p class="mix-heading">สัญญาณตลาด</p>
                 <div id="signal-mix" class="mix-grid"></div>
+                <p class="mix-heading compact">โซน RSI</p>
                 <div id="rsi-mix" class="mix-grid compact"></div>
             </article>
         </section>
 
-        <section class="visual-grid">
+        <section class="visual-grid visual-grid-single">
             <article class="viz-card">
                 <div class="panel-heading">
                     <h3>ซื้อขายคึกคักที่สุด</h3>
@@ -182,11 +193,23 @@
         const tableCaption = document.getElementById("table-caption");
 
         const tickerFilter = document.getElementById("ticker-filter");
+        const yearFilter = document.getElementById("year-filter");
         const signalFilter = document.getElementById("signal-filter");
         const rsiFilter = document.getElementById("rsi-filter");
         const bandFilter = document.getElementById("band-filter");
         const membershipFilter = document.getElementById("membership-filter");
         const resetFilters = document.getElementById("reset-filters");
+        const MIN_DISPLAY_VOLUME = 100000;
+        const MIN_VISUAL_START_PRICE = 1;
+        const MAX_VISUAL_ABS_RETURN = 3;
+        const RSI_LABELS = {
+            Overbought: "ซื้อมากเกินไป",
+            Strength: "แข็งแกร่ง",
+            Balanced: "สมดุล",
+            Weakening: "เริ่มอ่อนแรง",
+            Oversold: "ขายมากเกินไป",
+            Unknown: "ไม่ทราบ"
+        };
 
         function formatPercent(value) {
             if (value === null || value === undefined) return "-";
@@ -212,11 +235,94 @@
             return "neutral";
         }
 
+        function preferLiquidRows(rows, minimumRows) {
+            const liquidRows = rows.filter((row) => (row.volume || 0) >= MIN_DISPLAY_VOLUME);
+            return liquidRows.length >= minimumRows ? liquidRows : rows;
+        }
+
+        function isVisualQualityRow(row) {
+            const startClose = row.history_start_close || row.open || 0;
+            const close = row.close || 0;
+            const returnPct = row.return_pct;
+            return (
+                returnPct !== null &&
+                returnPct !== undefined &&
+                Math.abs(returnPct) <= MAX_VISUAL_ABS_RETURN &&
+                startClose >= MIN_VISUAL_START_PRICE &&
+                close >= MIN_VISUAL_START_PRICE &&
+                (row.volume || 0) >= MIN_DISPLAY_VOLUME
+            );
+        }
+
         function passesMembershipFilter(row, membershipValue) {
             if (membershipValue === "All") return true;
             if (membershipValue === "พอร์ตหลัก") return row.in_portfolio;
             if (membershipValue === "เฝ้าดูเติบโต") return row.in_growth_watchlist;
             return !row.in_portfolio && !row.in_growth_watchlist;
+        }
+
+        function signalForRow(row) {
+            const returnPct = row.return_pct || 0;
+            const rsi = row.rsi_14;
+            const macd = row.macd_12_26_9;
+            if (returnPct >= 0.02 && (rsi === null || rsi === undefined || rsi >= 55) && (macd === null || macd === undefined || macd >= 0)) {
+                return "โมเมนตัมเด่น";
+            }
+            if (returnPct <= -0.02 || (rsi !== null && rsi !== undefined && rsi < 40)) {
+                return "แรงขายกดดัน";
+            }
+            if (rsi !== null && rsi !== undefined && rsi >= 45 && rsi <= 55) {
+                return "สมดุล";
+            }
+            return "น่าจับตา";
+        }
+
+        function priceBandForPrice(price) {
+            if ((price || 0) >= 100) return "ราคาสูง";
+            if ((price || 0) >= 20) return "ราคาปานกลาง";
+            if ((price || 0) >= 5) return "เล็กแต่ซื้อขายคึกคัก";
+            return "เชิงเก็งกำไร";
+        }
+
+        function rsiBucketLabel(bucket) {
+            return RSI_LABELS[bucket] || bucket || "ไม่ทราบ";
+        }
+
+        function rowForYear(row) {
+            const year = yearFilter.value;
+            const metric = row.returns_by_year ? row.returns_by_year[year] : null;
+            if (!metric) {
+                return {
+                    ...row,
+                    return_pct: null,
+                    total_return_pct: null,
+                    signal: "ไม่ทราบ",
+                    selected_year: Number(year)
+                };
+            }
+            const adjustedRow = {
+                ...row,
+                return_pct: metric.return_pct,
+                total_return_pct: metric.return_pct,
+                history_start_date: metric.start_date,
+                date: metric.end_date,
+                history_start_close: metric.start_close,
+                history_years_active: null,
+                selected_year: Number(year),
+                open: metric.start_close,
+                close: metric.close,
+                volume: metric.volume,
+                rsi_14: metric.rsi_14,
+                macd_12_26_9: metric.macd_12_26_9,
+                cci_14_0_015: metric.cci_14_0_015,
+                range_pct: metric.range_pct,
+                rsi_bucket: rsiBucketLabel(metric.rsi_bucket),
+                price_band: priceBandForPrice(metric.close)
+            };
+            return {
+                ...adjustedRow,
+                signal: signalForRow(adjustedRow)
+            };
         }
 
         function filteredRows() {
@@ -226,7 +332,7 @@
             const bandValue = bandFilter.value;
             const membershipValue = membershipFilter.value;
 
-            return initialPayload.securities.filter((row) => {
+            return initialPayload.securities.map(rowForYear).filter((row) => {
                 if (tickerValue && !row.ticker.includes(tickerValue)) return false;
                 if (signalValue !== "All" && row.signal !== signalValue) return false;
                 if (rsiValue !== "All" && row.rsi_bucket !== rsiValue) return false;
@@ -244,15 +350,17 @@
             const totalVolume = rows.reduce((sum, row) => sum + (row.volume || 0), 0);
             const portfolioCount = rows.filter((row) => row.in_portfolio).length;
             const breadthRatio = decliners ? advancers / decliners : advancers;
+            const selectedYear = Number(yearFilter.value || initialPayload.summary?.selected_year || 0);
 
             const cards = [
                 { label: "จำนวนหุ้นที่แสดง", value: rows.length, helper: "หลังใช้ตัวกรองแล้ว" },
-                { label: "หุ้นบวก", value: advancers, helper: "จำนวนหุ้นที่ราคาปรับขึ้น", tone: "positive" },
-                { label: "หุ้นลบ", value: decliners, helper: "จำนวนหุ้นที่ราคาปรับลง", tone: "negative" },
+                { label: "หุ้นผลตอบแทนบวก", value: advancers, helper: "จำนวนหุ้นที่บวกในปีที่เลือก", tone: "positive" },
+                { label: "หุ้นผลตอบแทนลบ", value: decliners, helper: "จำนวนหุ้นที่ลบในปีที่เลือก", tone: "negative" },
                 { label: "ผลตอบแทนเฉลี่ย", value: formatPercent(avgReturn), helper: `${advancers} บวก / ${decliners} ลบ`, tone: signedClass(avgReturn) },
                 { label: "อัตราส่วน Breadth", value: formatNumber(breadthRatio, 2), helper: "หุ้นบวกหารด้วยหุ้นลบ" },
-                { label: "ปริมาณรวม", value: formatVolume(totalVolume), helper: "มูลค่าการหมุนเวียนรวม" },
-                { label: "ซ้ำกับพอร์ตหลัก", value: portfolioCount, helper: "หุ้นที่อยู่ในพอร์ตโมเดลปัจจุบัน" }
+                { label: "ปริมาณปลายปี", value: formatVolume(totalVolume), helper: "รวมปริมาณของ snapshot ปลายปี" },
+                { label: "ซ้ำกับพอร์ตหลัก", value: portfolioCount, helper: "หุ้นที่อยู่ในพอร์ตโมเดลปัจจุบัน" },
+                { label: "ปีที่เลือก", value: selectedYear || "-", helper: "คำนวณจากวันแรกถึงวันสุดท้ายของปี" }
             ];
 
             summaryGrid.innerHTML = cards.map((card) => `
@@ -267,16 +375,18 @@
         function renderHighlights(rows) {
             const sorted = [...rows].filter((row) => row.return_pct !== null && row.return_pct !== undefined)
                 .sort((a, b) => b.return_pct - a.return_pct);
-            const strongest = sorted[0];
-            const weakest = sorted[sorted.length - 1];
+            const strongest = sorted.find((row) => row.return_pct > 0);
+            const weakest = [...sorted].reverse().find((row) => row.return_pct < 0);
             const highestVolume = [...rows].sort((a, b) => (b.volume || 0) - (a.volume || 0))[0];
-            const portfolioName = rows.find((row) => row.in_portfolio);
+            const portfolioName = [...rows]
+                .filter((row) => row.in_portfolio)
+                .sort((a, b) => Math.abs(b.return_pct || 0) - Math.abs(a.return_pct || 0))[0];
 
             const items = [
-                { label: "บวกแรงสุด", ticker: strongest?.ticker, value: strongest ? formatPercent(strongest.return_pct) : "-" },
-                { label: "ลบแรงสุด", ticker: weakest?.ticker, value: weakest ? formatPercent(weakest.return_pct) : "-" },
+                { label: "โตสูงสุด", ticker: strongest?.ticker || "ไม่มี", value: strongest ? formatPercent(strongest.return_pct) : "ไม่พบหุ้นบวก" },
+                { label: "ลดลงสุด", ticker: weakest?.ticker || "ไม่มี", value: weakest ? formatPercent(weakest.return_pct) : "ไม่พบหุ้นลบ" },
                 { label: "ปริมาณสูงสุด", ticker: highestVolume?.ticker, value: highestVolume ? formatVolume(highestVolume.volume) : "-" },
-                { label: "หุ้นพอร์ตที่มองเห็น", ticker: portfolioName?.ticker || "ไม่มี", value: portfolioName ? portfolioName.signal : "ไม่พบหุ้นซ้ำ" }
+                { label: "หุ้นพอร์ตเด่นสุด", ticker: portfolioName?.ticker || "ไม่มี", value: portfolioName ? formatPercent(portfolioName.return_pct) : "ไม่พบหุ้นซ้ำ" }
             ];
 
             highlightRibbon.innerHTML = items.map((item) => `
@@ -289,10 +399,11 @@
         }
 
         function renderHeatmap(rows) {
-            const picked = [...rows]
-                .filter((row) => row.return_pct !== null && row.return_pct !== undefined)
+            const candidates = [...rows]
+                .filter(isVisualQualityRow);
+            const picked = candidates
                 .sort((a, b) => Math.abs(b.return_pct) - Math.abs(a.return_pct))
-                .slice(0, 24);
+                .slice(0, 16);
 
             heatmapGrid.innerHTML = picked.map((row) => `
                 <button class="heatmap-tile ${signedClass(row.return_pct)}" type="button" data-ticker="${row.ticker}">
@@ -305,7 +416,7 @@
 
         function renderScatter(rows) {
             const picked = [...rows]
-                .filter((row) => row.return_pct !== null && row.return_pct !== undefined && row.range_pct !== null && row.range_pct !== undefined)
+                .filter((row) => isVisualQualityRow(row) && row.range_pct !== null && row.range_pct !== undefined)
                 .sort((a, b) => (b.volume || 0) - (a.volume || 0))
                 .slice(0, 80);
 
@@ -339,21 +450,22 @@
                 <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" class="scatter-axis"></line>
                 ${bubbles}
                 <text x="${pad}" y="20" class="scatter-label">ผลตอบแทน</text>
-                <text x="${width - 160}" y="${height - 10}" class="scatter-label">ช่วงแกว่งระหว่างวัน</text>
+                <text x="${width - 180}" y="${height - 10}" class="scatter-label">ช่วงแกว่งวันปลายปี</text>
             `;
         }
 
         function renderMovers(rows) {
-            const winners = [...rows]
-                .filter((row) => row.return_pct !== null && row.return_pct !== undefined)
+            const candidates = [...rows].filter(isVisualQualityRow);
+            const winners = [...candidates]
                 .sort((a, b) => b.return_pct - a.return_pct)
                 .slice(0, 5);
-            const losers = [...rows]
-                .filter((row) => row.return_pct !== null && row.return_pct !== undefined)
+            const losers = [...candidates]
                 .sort((a, b) => a.return_pct - b.return_pct)
                 .slice(0, 5);
 
-            const blocks = [...winners, ...losers];
+            const blocks = [...winners, ...losers].filter(
+                (row, index, allRows) => allRows.findIndex((candidate) => candidate.ticker === row.ticker) === index
+            );
             const maxAbs = Math.max(...blocks.map((row) => Math.abs(row.return_pct || 0)), 0.01);
 
             moversChart.innerHTML = blocks.map((row) => `
@@ -413,7 +525,7 @@
                 .sort((a, b) => Math.abs(b.return_pct || 0) - Math.abs(a.return_pct || 0))
                 .slice(0, 50);
 
-            tableCaption.textContent = `กำลังแสดง ${topRows.length} หุ้น จากทั้งหมด ${rows.length} แถวที่ผ่านตัวกรอง`;
+            tableCaption.textContent = `กำลังแสดง ${topRows.length} หุ้นที่ผลตอบแทนเด่นสุด จากทั้งหมด ${rows.length} แถวที่ผ่านตัวกรอง`;
             marketTableBody.innerHTML = topRows.map((row) => `
                 <tr>
                     <td class="ticker-cell">${row.ticker}</td>
@@ -442,13 +554,14 @@
             renderTable(rows);
         }
 
-        [tickerFilter, signalFilter, rsiFilter, bandFilter, membershipFilter].forEach((node) => {
+        [tickerFilter, yearFilter, signalFilter, rsiFilter, bandFilter, membershipFilter].forEach((node) => {
             node.addEventListener("input", renderAll);
             node.addEventListener("change", renderAll);
         });
 
         resetFilters.addEventListener("click", () => {
             tickerFilter.value = "";
+            yearFilter.value = String(initialPayload.summary?.selected_year || yearFilter.options[0]?.value || "");
             signalFilter.value = "All";
             rsiFilter.value = "All";
             bandFilter.value = "All";

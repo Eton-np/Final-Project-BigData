@@ -1,17 +1,41 @@
 # Stock Portfolio Pipeline
 
-End-to-end Apache Airflow + PySpark project for ingesting large US stock CSV files, converting them to partitioned Parquet, calculating financial indicators, generating a monthly portfolio, and showing the latest portfolio on a live web dashboard.
+End-to-end Apache Airflow + PySpark project for building a stock analytics pipeline from raw CSV files to partitioned Parquet, portfolio outputs, and an interactive FastAPI dashboard.
 
 ## What This Project Does
 
 1. Ingests raw stock CSV files from `Data/StockHistory/*.csv`
-2. Converts them into Parquet partitioned by `Year` and `Month`
-3. Cleans nulls and filters out rows with no trading activity
-4. Computes `Daily_Return`, `MA50`, `MA200`, and `Volatility30`
-5. Selects up to 20 stocks per month using the rule `MA50 > MA200` and lowest volatility
-6. Exports the final monthly portfolio into `output/exports/final_portfolio.csv`
-7. Serves a web dashboard that merges the latest portfolio with the latest rows from `Data/Todays_stocks.csv`
-8. Builds JSON snapshots for a filterable `Market Dashboard` and `Investment Insights` page
+2. Converts the raw CSV files into Parquet partitioned by `Year` and `Month`
+3. Cleans invalid rows, fills missing price values where possible, removes rows with no trading activity, and deduplicates by `Ticker` and `Date`
+4. Calculates technical indicators including `Daily_Return`, `MA50`, `MA200`, `Volatility30`, `RSI_14`, `MACD_12_26_9`, and `CCI_14_0_015`
+5. Selects a monthly core portfolio using `MA50 > MA200`, lowest volatility, and equal weighting
+6. Builds a growth watchlist ranked by long-term CAGR
+7. Writes Parquet datasets, CSV exports, and dashboard JSON snapshots
+8. Serves a web dashboard for market overview, investment insights, and architecture explanation
+
+The current Docker/Airflow default uses `PORTFOLIO_SIZE=10`, so the core portfolio export contains up to 10 stocks per month. Change `PORTFOLIO_SIZE` in `.env.example` or `docker-compose.yml` if you want a different portfolio size.
+
+## Repository Scope
+
+This repository is intended to store the project code and documentation only. Large raw datasets and generated outputs are intentionally ignored by Git.
+
+Ignored local data/output paths:
+
+- `Data/`
+- `Stock_List.csv`
+- `output/`
+- `.venv-airflow/`
+- `airflow_home_local/`
+- `.hadoop/`
+- `architecture-check*.png`
+
+Before running the pipeline, place the source CSV files locally under:
+
+```text
+Data/StockHistory/*.csv
+```
+
+The pipeline derives `Ticker` from each CSV filename when the source file does not already include a `Ticker` column.
 
 ## Project Structure
 
@@ -26,9 +50,16 @@ End-to-end Apache Airflow + PySpark project for ingesting large US stock CSV fil
 |   |-- calculate_indicators.py
 |   |-- select_portfolio.py
 |   |-- export_portfolio.py
+|   |-- extract_growth_start_end.py
+|   |-- calculate_growth_cagr.py
+|   |-- filter_rank_growth.py
+|   |-- export_growth_portfolio.py
 |   |-- dashboard_datasets.py
+|   |-- dashboard_snapshot_spark.py
 |   |-- build_market_dashboard_data.py
 |   `-- build_investment_insights.py
+|-- notebooks/
+|   `-- stockhistory_eda.ipynb
 |-- scripts/
 |   |-- run_dashboard.ps1
 |   `-- run_local_pipeline.ps1
@@ -40,56 +71,86 @@ End-to-end Apache Airflow + PySpark project for ingesting large US stock CSV fil
 |-- tests/
 |   |-- test_dashboard_payload.py
 |   `-- test_project_structure.py
-|-- Data/
 |-- docker-compose.yml
+|-- Dockerfile.airflow
 |-- requirements.txt
-`-- .env.example
+|-- run_dashboard.py
+|-- .env.example
+`-- README.md
+```
+
+## Pipeline Flow
+
+Main portfolio pipeline:
+
+```text
+CSV ingest -> Parquet -> clean -> indicators -> portfolio selection -> CSV export
+```
+
+Growth pipeline:
+
+```text
+clean stock history -> start/end extraction -> CAGR calculation -> growth ranking -> CSV export
+```
+
+Dashboard refresh:
+
+```text
+Parquet datasets -> market_dashboard.json -> investment_insights.json -> FastAPI/Jinja dashboard
 ```
 
 ## Airflow DAGs
 
-- `stock_etl_skeleton`
-  Purpose: show the complete task flow in Airflow UI with empty tasks only
-- `stock_portfolio_pipeline`
-  Purpose: run the real Spark jobs in sequence from ingestion to final CSV export
-- `growth_portfolio_pipeline`
-  Purpose: run the growth strategy flow from clean stock history to `Top20_Growth_Portfolio.csv`
-- `market_dashboard_pipeline`
-  Purpose: build `output/exports/market_dashboard.json` for the Market Dashboard page
-- `investment_insights_pipeline`
-  Purpose: build `output/exports/investment_insights.json` for the Investment Insights page
+- `stock_portfolio_pipeline`: runs the main Spark jobs from raw CSV ingestion to `final_portfolio.csv`
+- `growth_portfolio_pipeline`: builds the Top 20 growth portfolio from long-term CAGR
+- `dashboard_refresh_pipeline`: refreshes `market_dashboard.json` and `investment_insights.json`
+
+The DAGs are manual-trigger DAGs. The dashboard shows data after a local pipeline run or Airflow DAG run creates the prepared snapshot files.
 
 ## Web Dashboard
 
-The final business-facing output is now a pair of interactive web pages, not just CSV files.
+Routes:
 
-- Page route: `/`
-- Secondary page route: `/insights`
-- JSON API route: `/api/portfolio`
-- Secondary JSON API route: `/api/investment-insights`
-- Prepared source 1: `output/exports/market_dashboard.json`
-- Prepared source 2: `output/exports/investment_insights.json`
-- Underlying source files: `Data/Todays_stocks.csv`, `output/exports/final_portfolio.csv`, `output/exports/Top20_Growth_Portfolio.csv`
+- `/`: Market Dashboard
+- `/insights`: Investment Insights
+- `/growth`: alias for Investment Insights
+- `/architecture`: pipeline architecture page for presentation
+- `/api/portfolio`: market dashboard JSON
+- `/api/investment-insights`: investment insights JSON
+- `/api/growth-portfolio`: legacy alias for investment insights JSON
 
-The Market Dashboard shows:
+The Market Dashboard includes:
 
-- Filterable market breadth summary
+- Market breadth summary
+- Year selector based on first-to-last trading day in the selected year
+- Filters for ticker, signal, RSI zone, price band, and portfolio/growth membership
 - Performance heatmap
-- Risk-vs-return scatter view
-- Movers, activity, and signal mix
-- Universe explorer table
+- Risk-vs-return scatter chart
+- Movers, activity, signal mix, and universe table
 
-The Investment Insights page shows:
+The Investment Insights page includes:
 
-- Score-based labels such as `Worth Watching`, `Stable`, and `Caution`
-- Spotlight names with reasons and warnings
+- Score-based labels: `Worth Watching`, `Stable`, and `Caution`
+- Spotlight candidates with reasons and warnings
 - Score distribution and ranking ladder
-- Overlap with the existing portfolio and growth watchlist
-- A ranked insight explorer table
+- Portfolio/growth watchlist overlap
+- Ranked candidate table
 
-## Local Run With Spark
+## Local Run
 
-Install dependencies in your Python environment, then run:
+Install dependencies first:
+
+```powershell
+pip install -r requirements.txt
+```
+
+Run the full local pipeline:
+
+```powershell
+.\scripts\run_local_pipeline.ps1
+```
+
+Or run each step manually:
 
 ```powershell
 spark-submit jobs/csv_to_parquet.py
@@ -97,60 +158,45 @@ spark-submit jobs/cleanse_data.py
 spark-submit jobs/calculate_indicators.py
 spark-submit jobs/select_portfolio.py
 spark-submit jobs/export_portfolio.py
-python jobs/build_market_dashboard_data.py
-python jobs/build_investment_insights.py
+python jobs/build_market_dashboard_data.py --mark-airflow-run
+python jobs/build_investment_insights.py --mark-airflow-run
 ```
 
-Or use the helper script:
+For a full 10-year rebuild from CSV:
 
 ```powershell
-.\scripts\run_local_pipeline.ps1
+spark-submit jobs/csv_to_parquet.py --force-rebuild --years-back 10 --max-files 0 --group-bytes 536870912
 ```
+
+After Parquet exists, `jobs/csv_to_parquet.py` skips conversion unless `--force-rebuild` is passed.
 
 ## Run The Dashboard
 
-After generating the required exports and JSON snapshots, you can start the dashboard in either of these ways:
-
-Run locally with Python:
+After the JSON snapshots exist, run:
 
 ```powershell
 python run_dashboard.py
 ```
 
-Optional live-reload for local development:
+Then open:
+
+```text
+http://localhost:8000
+```
+
+Optional live reload:
 
 ```powershell
 $env:DASHBOARD_RELOAD="1"
 python run_dashboard.py
 ```
 
-Or run with Docker:
+Do not open `web/templates/index.html` directly with `file:///...`; it is a Jinja template and must be rendered through FastAPI.
 
-```powershell
-.\scripts\run_dashboard.ps1
-```
+## Docker Compose
 
-To keep it in the background:
+Start Airflow and the dashboard with Docker Compose:
 
-```powershell
-.\scripts\run_dashboard.ps1 -Detached
-```
-
-Then open:
-
-- Dashboard: `http://localhost:8000`
-
-Important:
-
-- Do not open [index.html](c:/Users/napho/Downloads/archive%20(3)/web/templates/index.html) directly with `file:///...`
-- This file is a Jinja template, so it must be rendered by FastAPI first
-- If you open it directly in the browser, you will see raw `{{ ... }}` and `{% ... %}` template code
-- Avoid running `python run_dashboard.py` in parallel with Docker, because it can create confusing host/port conflicts
-- On some Windows setups, auto-reload can fail with a permission error; if that happens, leave `DASHBOARD_RELOAD` unset and run without reload
-
-## Run With Docker Compose
-
-This repo includes a minimal Airflow stack with Postgres:
 ```powershell
 docker compose up airflow-init
 docker compose up
@@ -159,53 +205,48 @@ docker compose up
 Then open:
 
 - Airflow UI: `http://localhost:8082`
+- Dashboard: `http://localhost:8000`
 - Username: `airflow`
 - Password: `airflow`
 
-Airflow in this project is intended to run through Docker Compose only.
+Airflow in this project is intended to run through Docker Compose.
 
-## Configurable Environment Variables
+## Environment Variables
 
-The pipeline reads these environment variables when available:
+Important defaults:
 
-- `PROJECT_ROOT`
-- `RAW_INPUT_PATH`
-- `RAW_INPUT_MAX_FILES`
-- `RAW_INPUT_YEARS_BACK`
-- `PARQUET_OUTPUT_PATH`
-- `CLEAN_OUTPUT_PATH`
-- `INDICATOR_OUTPUT_PATH`
-- `PORTFOLIO_OUTPUT_PATH`
-- `EXPORT_OUTPUT_PATH`
-- `SPARK_MASTER_URL`
-- `SPARK_SQL_SHUFFLE_PARTITIONS`
-- `SPARK_BINARY`
-- `AIRFLOW_SPARK_TASK_MODE`
-- `PORTFOLIO_SIZE`
-- `PORTFOLIO_CAPITAL_BASE`
-
-Copy `.env.example` to `.env` and adjust values if needed.
-
-Recommended default:
-
+- `RAW_INPUT_PATH=Data/StockHistory/*.csv`
+- `RAW_INPUT_MAX_FILES=0`
+- `RAW_INPUT_YEARS_BACK=10`
+- `RAW_INPUT_GROUP_BYTES=536870912`
+- `RAW_INPUT_MIN_START_YEAR=2015`
+- `DASHBOARD_DATASET_ENGINE=spark`
+- `DASHBOARD_ALLOW_CSV_FALLBACK=0`
+- `DASHBOARD_HISTORY_MAX_TICKERS=0`
+- `SPARK_MASTER_URL=local[4]`
+- `SPARK_SQL_SHUFFLE_PARTITIONS=48`
 - `AIRFLOW_SPARK_TASK_MODE=bash`
-  This works without creating an Airflow `spark_default` connection.
-- Switch to `AIRFLOW_SPARK_TASK_MODE=spark_submit` only when your Airflow environment already has the Spark provider and a configured `spark_default` connection.
-- For faster local/Airflow runs on very large datasets, start with `RAW_INPUT_MAX_FILES=100` and `RAW_INPUT_YEARS_BACK=8`.
+- `PORTFOLIO_SIZE=10` in Docker Compose
+- `GROWTH_MINIMUM_YEARS=1`
+- `GROWTH_MINIMUM_PRICE=5`
+
+Copy `.env.example` to `.env` if you want local overrides.
 
 ## Output Locations
 
-- Raw-to-Parquet: `output/parquet/stocks`
-- Cleaned data: `output/parquet/stocks_clean`
-- Indicators: `output/parquet/stocks_indicators`
-- Portfolio parquet: `output/parquet/portfolio`
-- Final export: `output/exports/final_portfolio.csv`
-- Growth start/end parquet: `output/parquet/growth_start_end`
-- Growth CAGR parquet: `output/parquet/growth_cagr`
-- Growth ranked parquet: `output/parquet/growth_ranked`
-- Growth export: `output/exports/Top20_Growth_Portfolio.csv`
+- Raw Parquet: `output/parquet/stocks`
+- Cleaned Parquet: `output/parquet/stocks_clean`
+- Indicator Parquet: `output/parquet/stocks_indicators`
+- Portfolio Parquet: `output/parquet/portfolio`
+- Final portfolio CSV: `output/exports/final_portfolio.csv`
+- Growth start/end Parquet: `output/parquet/growth_start_end`
+- Growth CAGR Parquet: `output/parquet/growth_cagr`
+- Growth ranked Parquet: `output/parquet/growth_ranked`
+- Growth CSV export: `output/exports/Top20_Growth_Portfolio.csv`
 - Market dashboard snapshot: `output/exports/market_dashboard.json`
 - Investment insights snapshot: `output/exports/investment_insights.json`
+
+These outputs are generated artifacts and are not committed to Git.
 
 ## Tests
 
@@ -215,8 +256,24 @@ Run:
 pytest
 ```
 
+On this Windows workspace, the bundled environment can be used with:
+
+```powershell
+.\.venv-airflow\Scripts\python.exe -m pytest -q
+```
+
+## Presentation Notes
+
+For oral presentation, explain the project in this order:
+
+1. Raw CSV data is too large and slow to scan repeatedly, so the project converts it to partitioned Parquet.
+2. The clean step makes the stock history usable by filtering invalid trading rows and standardizing date/year/month fields.
+3. The analysis layer calculates moving averages, volatility, RSI, MACD, CCI, monthly portfolio selection, and growth CAGR.
+4. Airflow orchestrates the jobs, while FastAPI serves prepared dashboard snapshots.
+5. The dashboard is current relative to the latest generated snapshot, not live market pricing.
+
 ## Notes
 
-- The current dataset already stores one CSV per ticker, so the ingestion job automatically derives `Ticker` from the source filename when the column is missing.
-- The dashboard is "real time" relative to the latest available local file data. If `Data/Todays_stocks.csv` is updated, the page reflects it on the next refresh cycle.
-- The code is structured so the same jobs can be triggered manually with `spark-submit` or orchestrated through Airflow.
+- The project uses Spark/Parquet by default for dashboard dataset generation.
+- CSV fallback code exists for debugging, but it is disabled by default because direct CSV scans are slow for this dataset size.
+- The dashboard refresh should run after the stock or growth pipeline finishes if you want the web pages to show the newest generated results.

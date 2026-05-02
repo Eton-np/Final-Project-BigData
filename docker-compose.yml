@@ -27,8 +27,14 @@ services:
       PYTHONPATH: /opt/airflow/project/jobs
       PROJECT_ROOT: /opt/airflow/project
       RAW_INPUT_PATH: /opt/airflow/project/Data/StockHistory/*.csv
-      RAW_INPUT_MAX_FILES: 10
-      RAW_INPUT_YEARS_BACK: 2
+      RAW_INPUT_MAX_FILES: 0
+      RAW_INPUT_YEARS_BACK: 10
+      RAW_INPUT_GROUP_BYTES: 536870912
+      RAW_INPUT_MIN_START_YEAR: 2015
+      DASHBOARD_HISTORY_MAX_TICKERS: 0
+      DASHBOARD_DATASET_ENGINE: spark
+      DASHBOARD_ALLOW_CSV_FALLBACK: 0
+      DASHBOARD_REQUIRE_FRESH_SESSION_MARKER: 0
       PARQUET_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks
       CLEAN_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks_clean
       INDICATOR_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks_indicators
@@ -45,7 +51,7 @@ services:
       SPARK_SQL_SHUFFLE_PARTITIONS: 48
       SPARK_BINARY: spark-submit
       PYTHON_BINARY: python
-      SPARK_MASTER_URL: local[1]
+      SPARK_MASTER_URL: local[4]
       AIRFLOW_SPARK_TASK_MODE: bash
       GROWTH_MINIMUM_PRICE: 5
       AIRFLOW_UID: 50000
@@ -81,8 +87,14 @@ services:
       PYTHONPATH: /opt/airflow/project/jobs
       PROJECT_ROOT: /opt/airflow/project
       RAW_INPUT_PATH: /opt/airflow/project/Data/StockHistory/*.csv
-      RAW_INPUT_MAX_FILES: 10
-      RAW_INPUT_YEARS_BACK: 2
+      RAW_INPUT_MAX_FILES: 0
+      RAW_INPUT_YEARS_BACK: 10
+      RAW_INPUT_GROUP_BYTES: 536870912
+      RAW_INPUT_MIN_START_YEAR: 2015
+      DASHBOARD_HISTORY_MAX_TICKERS: 0
+      DASHBOARD_DATASET_ENGINE: spark
+      DASHBOARD_ALLOW_CSV_FALLBACK: 0
+      DASHBOARD_REQUIRE_FRESH_SESSION_MARKER: 0
       PARQUET_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks
       CLEAN_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks_clean
       INDICATOR_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks_indicators
@@ -99,7 +111,7 @@ services:
       SPARK_SQL_SHUFFLE_PARTITIONS: 48
       SPARK_BINARY: spark-submit
       PYTHON_BINARY: python
-      SPARK_MASTER_URL: local[1]
+      SPARK_MASTER_URL: local[4]
       AIRFLOW_SPARK_TASK_MODE: bash
       GROWTH_MINIMUM_PRICE: 5
     command: webserver
@@ -126,8 +138,14 @@ services:
       PYTHONPATH: /opt/airflow/project/jobs
       PROJECT_ROOT: /opt/airflow/project
       RAW_INPUT_PATH: /opt/airflow/project/Data/StockHistory/*.csv
-      RAW_INPUT_MAX_FILES: 10
-      RAW_INPUT_YEARS_BACK: 2
+      RAW_INPUT_MAX_FILES: 0
+      RAW_INPUT_YEARS_BACK: 10
+      RAW_INPUT_GROUP_BYTES: 536870912
+      RAW_INPUT_MIN_START_YEAR: 2015
+      DASHBOARD_HISTORY_MAX_TICKERS: 0
+      DASHBOARD_DATASET_ENGINE: spark
+      DASHBOARD_ALLOW_CSV_FALLBACK: 0
+      DASHBOARD_REQUIRE_FRESH_SESSION_MARKER: 0
       PARQUET_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks
       CLEAN_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks_clean
       INDICATOR_OUTPUT_PATH: /opt/airflow/project/output/parquet/stocks_indicators
@@ -144,7 +162,7 @@ services:
       SPARK_SQL_SHUFFLE_PARTITIONS: 48
       SPARK_BINARY: spark-submit
       PYTHON_BINARY: python
-      SPARK_MASTER_URL: local[1]
+      SPARK_MASTER_URL: local[4]
       AIRFLOW_SPARK_TASK_MODE: bash
       GROWTH_MINIMUM_PRICE: 5
     command: scheduler
@@ -163,8 +181,14 @@ services:
     environment:
       PROJECT_ROOT: /app
       RAW_INPUT_PATH: /app/Data/StockHistory/*.csv
-      RAW_INPUT_MAX_FILES: 10
-      RAW_INPUT_YEARS_BACK: 2
+      RAW_INPUT_MAX_FILES: 0
+      RAW_INPUT_YEARS_BACK: 10
+      RAW_INPUT_GROUP_BYTES: 536870912
+      RAW_INPUT_MIN_START_YEAR: 2015
+      DASHBOARD_HISTORY_MAX_TICKERS: 0
+      DASHBOARD_DATASET_ENGINE: spark
+      DASHBOARD_ALLOW_CSV_FALLBACK: 0
+      DASHBOARD_REQUIRE_FRESH_SESSION_MARKER: 0
       PARQUET_OUTPUT_PATH: /app/output/parquet/stocks
       CLEAN_OUTPUT_PATH: /app/output/parquet/stocks_clean
       INDICATOR_OUTPUT_PATH: /app/output/parquet/stocks_indicators

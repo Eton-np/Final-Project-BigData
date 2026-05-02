@@ -13,7 +13,12 @@ from common import (
     build_argument_parser,
     create_spark,
     reset_output_path,
+    spark_path,
 )
+
+
+def log_progress(message: str) -> None:
+    print(f"[cleanse_data] {message}", flush=True)
 
 
 def main() -> None:
@@ -22,8 +27,17 @@ def main() -> None:
     parser.add_argument("--output-path", default=str(DEFAULT_CLEAN_OUTPUT))
     args = parser.parse_args()
 
+    log_progress(f"Starting cleanse job: input={args.input_path}, output={args.output_path}")
     spark = create_spark(args.app_name)
-    df = spark.read.parquet(args.input_path)
+    log_progress(
+        "Spark session ready: "
+        f"master={spark.sparkContext.master}, "
+        f"shuffle_partitions={spark.conf.get('spark.sql.shuffle.partitions')}"
+    )
+
+    log_progress("Reading source Parquet dataset")
+    df = spark.read.parquet(spark_path(args.input_path))
+    log_progress(f"Loaded schema with {len(df.schema.fields)} columns")
 
     # window เหล่านี้ใช้สำหรับเติมค่าตามลำดับเวลาแยกตามแต่ละ ticker
     # เหมาะกับข้อมูลประวัติหุ้นที่บางช่วงมีค่า price ขาดหาย
@@ -38,6 +52,10 @@ def main() -> None:
         and field.name not in {"Year", "Month"}
     ]
     price_like_columns = [name for name in ["Open", "High", "Low", "Close"] if name in numeric_columns]
+    log_progress(
+        f"Preparing transformations: numeric_columns={len(numeric_columns)}, "
+        f"price_fill_columns={','.join(price_like_columns) or 'none'}"
+    )
 
     # สำหรับราคา Open/High/Low/Close จะพยายามรักษาความต่อเนื่องด้วยการยืมค่าที่ไม่เป็น null ที่ใกล้ที่สุด
     for column_name in price_like_columns:
@@ -71,14 +89,16 @@ def main() -> None:
     )
 
     output_path = reset_output_path(args.output_path)
+    log_progress(f"Writing cleaned Parquet dataset to {output_path}")
 
     # เขียนผลลัพธ์ clean dataset ชุดใหม่ เพื่อให้ขั้นคำนวณ indicator นำไปใช้ต่อ
     (
         df.write.mode("overwrite")
         .partitionBy("Year", "Month")
-        .parquet(str(output_path))
+        .parquet(spark_path(output_path))
     )
 
+    log_progress("Cleanse job completed successfully")
     spark.stop()
 
 

@@ -12,9 +12,10 @@ from pathlib import Path
 from airflow import DAG
 from airflow.operators.empty import EmptyOperator
 
+
 try:
     from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-
+# ถ้าไม่มี provider ของ Spark ติดตั้งอยู่ ก็จะ fallback ไปใช้ BashOperator แทน
     HAS_SPARK_PROVIDER = True
 except ImportError:  # pragma: no cover - fallback for lighter Airflow installs
     from airflow.operators.bash import BashOperator
@@ -24,7 +25,7 @@ except ImportError:  # pragma: no cover - fallback for lighter Airflow installs
 if HAS_SPARK_PROVIDER:
     from airflow.operators.bash import BashOperator
 
-
+# ค่าพวกนี้ทำให้ DAG เดียวกันสามารถรันได้หลายสภาพแวดล้อม
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 JOBS_DIR = PROJECT_ROOT / "jobs"
 # ค่าพวกนี้ทำให้ DAG เดียวกันสามารถรันได้หลายสภาพแวดล้อม
@@ -46,8 +47,9 @@ PYTHON_JOBS = {
     "build_market_dashboard_data": JOBS_DIR / "build_market_dashboard_data.py",
     "build_investment_insights": JOBS_DIR / "build_investment_insights.py",
 }
-GROWTH_PARQUET_OUTPUT = PROJECT_ROOT / "output" / "parquet" / "growth_stocks"
-GROWTH_CLEAN_OUTPUT = PROJECT_ROOT / "output" / "parquet" / "growth_stocks_clean"
+# พาธพวกนี้ใช้ร่วมกันระหว่างหลาย DAG เพื่อให้แน่ใจว่าแต่ละ pipeline จะใช้ข้อมูลชุดเดียวกัน และลดการซ้ำซ้อนของการสร้างไฟล์ intermediate
+RAW_PARQUET_OUTPUT = Path(os.getenv("PARQUET_OUTPUT_PATH", str(PROJECT_ROOT / "output" / "parquet" / "stocks")))
+SHARED_CLEAN_OUTPUT = Path(os.getenv("CLEAN_OUTPUT_PATH", str(PROJECT_ROOT / "output" / "parquet" / "stocks_clean")))
 
 
 def build_spark_task(task_id: str, script_path: Path, script_args: list[str] | None = None):
@@ -78,33 +80,25 @@ def build_spark_task(task_id: str, script_path: Path, script_args: list[str] | N
         bash_command=command,
     )
 
+# ฟังก์ชันนี้ช่วยให้ DAG สามารถตรวจสอบได้ว่าข้อมูลที่ผ่านการ clean แล้วมีอยู่หรือไม่ก่อนที่จะรัน task ที่ต้องใช้ข้อมูลนั้น
+def build_clean_data_if_missing_task(task_id: str, input_path: Path, output_path: Path):
+    command = f"""
+    set -e
+    if [ -d "{output_path}" ] && find "{output_path}" -type f -name '*.parquet' -print -quit | grep -q .; then
+      echo "Reusing existing cleaned dataset at {output_path}"
+    else
+      echo "Cleaned dataset is missing; building {output_path}"
+      {PYTHON_BINARY} "{PYTHON_JOBS["cleanse_data"]}" --input-path "{input_path}" --output-path "{output_path}"
+    fi
+    """
+    return BashOperator(task_id=task_id, bash_command=command)
 
-with DAG(
-    dag_id="stock_etl_skeleton",
-    description="Skeleton DAG for the stock ETL and portfolio workflow",
-    start_date=datetime(2024, 1, 1),
-    schedule="0 0 1 * *",
-    catchup=False,
-    tags=["stocks", "skeleton"],
-) as skeleton_dag:
-    # DAG นี้ตั้งใจให้เป็นโครงเปล่าเพื่อใช้โชว์ flow ใน Airflow UI
-    # เหมาะสำหรับ present ลำดับ ETL โดยไม่ต้องรัน Spark job จริง
-    start = EmptyOperator(task_id="start")
-    ingest = EmptyOperator(task_id="ingest_csv_to_parquet")
-    cleanse = EmptyOperator(task_id="cleanse_data")
-    indicators = EmptyOperator(task_id="calculate_indicators")
-    select = EmptyOperator(task_id="select_portfolio")
-    export = EmptyOperator(task_id="export_portfolio")
-    end = EmptyOperator(task_id="end")
-
-    start >> ingest >> cleanse >> indicators >> select >> export >> end
-
-
+#Dagนี้เอาไว้สำหรับรัน pipeline หลักที่สร้างพอร์ตหุ้นรายเดือน 
 with DAG(
     dag_id="stock_portfolio_pipeline",
     description="Monthly stock portfolio pipeline orchestrated by Airflow and Spark",
     start_date=datetime(2024, 1, 1),
-    schedule="0 2 1 * *",
+    schedule=None,
     catchup=False,
     tags=["stocks", "spark", "portfolio"],
 ) as production_dag:
@@ -124,70 +118,62 @@ with DAG(
 
     start >> ingest >> cleanse >> indicators >> select >> export >> end
 
-
+# DAG นี้เป็น pipeline สำหรับกลยุทธ์ growth ที่เน้นการคัดเลือกหุ้นที่มี CAGR ระยะยาวดีที่สุด
 with DAG(
     dag_id="growth_portfolio_pipeline",
     description="Growth strategy pipeline that ranks stocks by long-term CAGR",
     start_date=datetime(2024, 1, 1),
-    schedule="0 3 1 * *",
+    schedule=None,
     catchup=False,
     tags=["stocks", "spark", "growth"],
 ) as growth_dag:
     # pipeline กลยุทธ์ growth
-    # ใช้ข้อมูลประวัติชุดเดียวกัน แล้วคำนวณ CAGR ระยะยาวก่อน export หุ้นที่อันดับดีที่สุด
+    # 1.) ingest ไฟล์ CSV ดิบ (ใช้ task เดียวกับ production_dag เพื่อให้แน่ใจว่าใช้ข้อมูลชุดเดียวกัน)
+    # 2.) ตรวจสอบว่าข้อมูลที่ผ่านการ clean แล้วมีอยู่หรือไม่ ถ้าไม่มีให้สร้างขึ้นมาใหม่ (เพื่อให้แน่ใจว่า pipeline นี้สามารถรันได้แม้ไม่เคยรัน pipeline หลักมาก่อน)
+    # 3.) ดึงข้อมูลราคาหุ้นในอดีตมาคำนวณจุดเริ่มต้นและจุดสิ้นสุดของช่วงเวลาที่จะคำนวณ CAGR
+    # 4.) คำนวณ CAGR ของแต่ละหุ้น
+    # 5.) คัดเลือกหุ้นที่มี CAGR สูงสุดมาเป็นพอร์ตโฟลิโอ
+    # 6.) export ออกมาเป็น CSV สำหรับใช้งานจริง
     start = EmptyOperator(task_id="start")
-    ingest = build_spark_task(
-        "csv_to_parquet",
-        PYTHON_JOBS["csv_to_parquet"],
-        ["--output-path", str(GROWTH_PARQUET_OUTPUT)],
-    )
-    cleanse = build_spark_task(
-        "cleanse_data",
-        PYTHON_JOBS["cleanse_data"],
-        ["--input-path", str(GROWTH_PARQUET_OUTPUT), "--output-path", str(GROWTH_CLEAN_OUTPUT)],
-    )
+    ensure_parquet = build_spark_task("ensure_stockhistory_parquet", PYTHON_JOBS["csv_to_parquet"])
+    ensure_clean = build_clean_data_if_missing_task("ensure_clean_data", RAW_PARQUET_OUTPUT, SHARED_CLEAN_OUTPUT)
     extract = build_spark_task(
         "extract_growth_start_end",
         PYTHON_JOBS["extract_growth_start_end"],
-        ["--input-path", str(GROWTH_CLEAN_OUTPUT)],
+        ["--input-path", str(SHARED_CLEAN_OUTPUT)],
     )
     cagr = build_spark_task("calculate_growth_cagr", PYTHON_JOBS["calculate_growth_cagr"])
     rank = build_spark_task("filter_rank_growth", PYTHON_JOBS["filter_rank_growth"])
     export = build_spark_task("export_growth_portfolio", PYTHON_JOBS["export_growth_portfolio"])
     end = EmptyOperator(task_id="end")
 
-    start >> ingest >> cleanse >> extract >> cagr >> rank >> export >> end
+    start >> ensure_parquet >> ensure_clean >> extract >> cagr >> rank >> export >> end
 
-
+# DAG นี้เป็น pipeline สำหรับ refresh snapshot ที่หน้าเว็บอ่านใช้งาน เช่น dashboard และ insights ต่างๆ
 with DAG(
-    dag_id="market_dashboard_pipeline",
-    description="Prepares the market overview dataset consumed by the Market Dashboard page",
+    dag_id="dashboard_refresh_pipeline",
+    description="Refreshes the prepared Market Dashboard and Investment Insights snapshots",
     start_date=datetime(2024, 1, 1),
-    schedule="15 4 * * 1-5",
+    schedule=None,
     catchup=False,
-    tags=["dashboard", "market", "stocks"],
-) as market_dashboard_dag:
-    # DAG นี้ใช้สร้าง JSON snapshot สำหรับหน้า Market Dashboard
-    # หน้า dashboard จะอ่านไฟล์ที่เตรียมไว้แล้ว แทนการคำนวณใหม่ทุกครั้งที่มี request
+    tags=["stocks", "dashboard", "web"],
+) as dashboard_dag:
+    #pipeline สำหรับ refresh snapshot ที่หน้าเว็บอ่านใช้งาน เช่น dashboard และ insights ต่างๆ
+    #1.) ตรวจสอบว่าข้อมูลที่ผ่านการ clean แล้วมีอยู่หรือไม่ ถ้าไม่มีให้สร้างขึ้นมาใหม่ (เพื่อให้แน่ใจว่า pipeline นี้สามารถรันได้แม้ไม่เคยรัน pipeline หลักมาก่อน)
+    #2.) สร้าง dataset สำหรับหน้า dashboard ซึ่งจะถูกนำไปใช้แสดงผลในหน้าเว็บ และ API ที่เกี่ยวข้อง
+    #3.) สร้าง dataset สำหรับหน้า investment insights ซึ่งจะถูกนำไปใช้แสดงผลในหน้าเว็บ และ API ที่เกี่ยวข้อง
     start = EmptyOperator(task_id="start")
-    build_market = build_spark_task("build_market_dashboard_data", PYTHON_JOBS["build_market_dashboard_data"])
+    ensure_parquet = build_spark_task("ensure_stockhistory_parquet", PYTHON_JOBS["csv_to_parquet"])
+    build_market = build_spark_task(
+        "build_market_dashboard_data",
+        PYTHON_JOBS["build_market_dashboard_data"],
+        ["--mark-airflow-run"],
+    )
+    build_insights = build_spark_task(
+        "build_investment_insights",
+        PYTHON_JOBS["build_investment_insights"],
+        ["--mark-airflow-run"],
+    )
     end = EmptyOperator(task_id="end")
 
-    start >> build_market >> end
-
-
-with DAG(
-    dag_id="investment_insights_pipeline",
-    description="Builds the score-based investment insights dataset for the second dashboard page",
-    start_date=datetime(2024, 1, 1),
-    schedule="30 4 * * 1-5",
-    catchup=False,
-    tags=["dashboard", "insights", "stocks"],
-) as investment_insights_dag:
-    # DAG นี้ใช้สร้าง JSON snapshot สำหรับหน้า Investment Insights
-    # หน้าที่คือแปลงข้อมูลตลาดล่าสุดให้เป็นชุดหุ้นที่มีคะแนนและ label พร้อมใช้งานบนหน้าเว็บ
-    start = EmptyOperator(task_id="start")
-    build_insights = build_spark_task("build_investment_insights", PYTHON_JOBS["build_investment_insights"])
-    end = EmptyOperator(task_id="end")
-
-    start >> build_insights >> end
+    start >> ensure_parquet >> build_market >> build_insights >> end

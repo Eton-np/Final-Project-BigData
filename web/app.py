@@ -60,6 +60,16 @@ async def growth_alias(request: Request) -> HTMLResponse:
     return await insights(request)
 
 
+@app.get("/architecture", response_class=HTMLResponse)
+async def architecture(request: Request) -> HTMLResponse:
+    # หน้าอธิบาย architecture และ workflow ที่ย่อจาก README สำหรับใช้ประกอบการนำเสนอ
+    return templates.TemplateResponse(
+        request=request,
+        name="architecture.html",
+        context={"request": request},
+    )
+
+
 @app.get("/api/investment-insights")
 async def get_investment_insights() -> dict:
     # JSON API สำหรับหน้า Investment Insights

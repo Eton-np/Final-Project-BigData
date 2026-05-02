@@ -11,15 +11,22 @@
     --amber: #ffcf66;
     --rose: #ff7f8e;
     --violet: #9d8cff;
-    --shadow: 0 30px 80px rgba(1, 8, 16, 0.5);
+    --shadow: 0 18px 46px rgba(1, 8, 16, 0.42);
 }
 
 * {
     box-sizing: border-box;
 }
 
+html {
+    min-height: 100%;
+    background: var(--bg);
+}
+
 body {
     margin: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
     color: var(--text);
     font-family: "Trebuchet MS", "Segoe UI", sans-serif;
     background:
@@ -29,9 +36,9 @@ body {
 }
 
 .page-shell {
-    max-width: 1480px;
+    max-width: 1500px;
     margin: 0 auto;
-    padding: 28px 18px 48px;
+    padding: 24px 18px 48px;
 }
 
 .topbar,
@@ -49,6 +56,10 @@ body {
     grid-template-columns: 1fr auto;
     align-items: center;
     margin-bottom: 18px;
+}
+
+.topbar > div {
+    min-width: 0;
 }
 
 .kicker,
@@ -84,11 +95,13 @@ p {
 h1 {
     font-size: clamp(2.1rem, 5vw, 4.2rem);
     line-height: 0.95;
+    overflow-wrap: break-word;
 }
 
 .page-links {
     display: flex;
     gap: 12px;
+    max-width: 100%;
 }
 
 .page-links a,
@@ -128,7 +141,7 @@ input {
     border: 1px solid var(--line);
     background: linear-gradient(180deg, var(--panel-strong) 0%, var(--panel) 100%);
     box-shadow: var(--shadow);
-    border-radius: 28px;
+    border-radius: 20px;
 }
 
 .hero-panel {
@@ -181,10 +194,15 @@ input {
 
 .panel-heading {
     display: flex;
-    align-items: baseline;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 16px;
+}
+
+.panel-heading p {
+    max-width: 34ch;
+    text-align: right;
 }
 
 .ghost-button {
@@ -294,7 +312,12 @@ select option:focus {
 
 .visual-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
     margin-bottom: 18px;
+}
+
+.visual-grid-single {
+    grid-template-columns: 1fr;
 }
 
 .viz-card,
@@ -302,16 +325,20 @@ select option:focus {
     padding: 20px;
 }
 
+.viz-card {
+    min-width: 0;
+}
+
 .heatmap-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
+    gap: 10px;
 }
 
 .heatmap-tile {
-    padding: 16px;
-    min-height: 106px;
-    border-radius: 22px;
+    padding: 14px 16px;
+    min-height: 88px;
+    border-radius: 16px;
     border: 1px solid transparent;
     color: var(--text);
     text-align: left;
@@ -325,8 +352,8 @@ select option:focus {
 
 .heatmap-tile strong {
     display: block;
-    margin: 10px 0 8px;
-    font-size: 1.3rem;
+    margin: 8px 0 6px;
+    font-size: 1.18rem;
 }
 
 .heatmap-tile.positive {
@@ -346,9 +373,9 @@ select option:focus {
 
 .scatter-chart {
     width: 100%;
-    min-height: 320px;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 20px;
+    min-height: 390px;
+    background: rgba(255, 255, 255, 0.025);
+    border-radius: 16px;
 }
 
 .scatter-axis {
@@ -385,7 +412,7 @@ select option:focus {
 
 .bar-row {
     display: grid;
-    grid-template-columns: 80px 1fr 90px;
+    grid-template-columns: 82px minmax(120px, 1fr) 112px;
     gap: 12px;
     align-items: center;
 }
@@ -415,29 +442,66 @@ select option:focus {
 }
 
 .mix-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
 }
 
 .mix-grid.compact {
     margin-top: 12px;
 }
 
+.mix-heading {
+    margin: 4px 0 10px;
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.mix-heading.compact {
+    margin-top: 16px;
+}
+
 .mix-card {
-    padding: 18px;
+    min-height: 84px;
+    padding: 14px 16px;
 }
 
 .mix-card strong {
     display: block;
-    margin-top: 12px;
-    font-size: 1.5rem;
+    margin-top: 8px;
+    font-size: 1.35rem;
 }
 
 .mix-card.subtle {
     background: rgba(255, 255, 255, 0.04);
 }
 
+.insight-overview-grid {
+    grid-template-columns: 0.82fr 1.18fr;
+}
+
+.insight-detail-grid {
+    grid-template-columns: 1.05fr 0.95fr;
+}
+
+.distribution-card .mix-grid {
+    grid-template-columns: 1fr;
+}
+
+.distribution-card .mix-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    min-height: 76px;
+}
+
+.distribution-card .mix-card strong {
+    margin-top: 0;
+    font-size: 1.7rem;
+}
+
 .spotlight-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
 }
 
 .spotlight-card,
@@ -452,20 +516,45 @@ select option:focus {
     font-size: 0.72rem;
 }
 
+.spotlight-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    min-height: 158px;
+}
+
 .spotlight-card h4 {
     margin-top: 10px;
     font-size: 1.3rem;
 }
 
 .spotlight-card strong {
+    align-self: start;
     display: block;
-    margin: 14px 0 10px;
-    font-size: 1.8rem;
+    margin: 0;
+    font-size: 1.7rem;
 }
 
 .spotlight-card p,
 .note-card p {
+    grid-column: 1 / -1;
     line-height: 1.65;
+}
+
+.ladder-panel .stacked-bars {
+    gap: 14px;
+}
+
+.notes-stack {
+    grid-template-columns: 1fr;
+}
+
+.note-card {
+    min-height: 108px;
+}
+
+.note-card h4 {
+    margin-bottom: 8px;
 }
 
 .table-wrap {
@@ -501,14 +590,256 @@ tbody tr:hover {
     letter-spacing: 0.02em;
 }
 
+.architecture-hero .hero-panel h2 {
+    max-width: 18ch;
+}
+
+.architecture-facts,
+.dag-list,
+.workflow-map {
+    display: grid;
+    gap: 12px;
+}
+
+.architecture-facts div,
+.dag-list div,
+.flow-step,
+.output-grid span,
+.workflow-map div {
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+}
+
+.architecture-facts div {
+    padding: 14px 16px;
+}
+
+.architecture-facts span,
+.flow-step span,
+.workflow-map span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.architecture-facts strong {
+    display: block;
+    margin-top: 8px;
+    color: var(--cyan);
+    font-size: 1.1rem;
+}
+
+.architecture-flow {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.flow-step {
+    min-height: 230px;
+    padding: 18px;
+}
+
+.flow-step span {
+    color: var(--cyan);
+}
+
+.flow-step h3 {
+    margin: 18px 0 10px;
+}
+
+.flow-step p,
+.dag-list p {
+    color: var(--muted);
+    line-height: 1.65;
+}
+
+.flow-step code,
+.dag-list code,
+.output-grid code,
+.workflow-map code {
+    color: var(--lime);
+    font-family: Consolas, "Courier New", monospace;
+}
+
+.architecture-grid {
+    grid-template-columns: 1.05fr 0.95fr;
+}
+
+.dag-list div {
+    padding: 16px;
+}
+
+.dag-list strong {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text);
+}
+
+.output-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.output-grid span {
+    display: block;
+    padding: 12px;
+    overflow-wrap: anywhere;
+}
+
+.workflow-map {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.workflow-map div {
+    padding: 16px;
+}
+
+.workflow-map code {
+    display: block;
+    margin-top: 10px;
+    overflow-wrap: anywhere;
+}
+
+.architecture-page {
+    max-width: 1540px;
+}
+
+.architecture-page h1 {
+    font-size: clamp(2.4rem, 4.4vw, 4.8rem);
+}
+
+.architecture-subtitle {
+    max-width: 980px;
+    margin: -6px 0 18px;
+    color: var(--muted);
+    line-height: 1.7;
+}
+
+.diagram-board {
+    overflow: auto;
+    width: 100%;
+    max-width: 100%;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at top, rgba(81, 208, 255, 0.12), transparent 28%),
+        linear-gradient(180deg, rgba(13, 33, 49, 0.96), rgba(8, 20, 32, 0.98));
+    box-shadow: var(--shadow);
+}
+
+.architecture-diagram {
+    display: block;
+    min-width: 1040px;
+    width: 100%;
+    height: auto;
+}
+
+.diagram-frame {
+    fill: rgba(255, 255, 255, 0.035);
+    stroke: rgba(144, 199, 255, 0.14);
+    stroke-width: 2;
+}
+
+.group-box rect {
+    fill: rgba(188, 211, 225, 0.16);
+    stroke: rgba(215, 236, 255, 0.36);
+    stroke-width: 2;
+}
+
+.diagram-title {
+    fill: #72cfff;
+    font-size: 34px;
+    font-weight: 800;
+}
+
+.diagram-caption,
+.group-title,
+.step-label {
+    fill: #d6e8ff;
+    font-weight: 700;
+}
+
+.diagram-caption {
+    font-size: 17px;
+}
+
+.group-title {
+    font-size: 17px;
+}
+
+.node-stroke,
+.data-stroke {
+    stroke: rgba(215, 236, 255, 0.76);
+    stroke-width: 2;
+}
+
+.no-top {
+    stroke-width: 0 2 2 2;
+}
+
+.node-text,
+.job-text,
+.data-text,
+.api-text {
+    fill: #ffffff;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.data-text {
+    fill: #efffff;
+}
+
+.flow-line {
+    fill: none;
+    stroke: #f8fdff;
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 4px rgba(81, 208, 255, 0.8));
+    marker-end: url("#arrow");
+}
+
+.flow-line.dashed {
+    stroke: #70d7ff;
+    stroke-width: 4;
+    stroke-dasharray: 10 9;
+    marker-end: url("#arrow-dash");
+}
+
+.step-label {
+    paint-order: stroke;
+    stroke: rgba(6, 19, 31, 0.92);
+    stroke-width: 6px;
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.api-group rect {
+    fill: rgba(188, 211, 225, 0.11);
+}
+
 @media (max-width: 1200px) {
     .hero-grid,
     .visual-grid,
+    .insight-overview-grid,
+    .insight-detail-grid,
     .metric-grid,
-    .insight-ribbon {
+    .insight-ribbon,
+    .architecture-flow,
+    .architecture-grid,
+    .workflow-map {
         grid-template-columns: 1fr;
     }
 
+    .distribution-card .mix-grid,
     .heatmap-grid,
     .spotlight-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -522,6 +853,7 @@ tbody tr:hover {
 
     .topbar,
     .filter-grid,
+    .distribution-card .mix-grid,
     .mix-grid,
     .heatmap-grid,
     .spotlight-grid,
@@ -533,7 +865,30 @@ tbody tr:hover {
         flex-wrap: wrap;
     }
 
+    .page-links a {
+        flex: 0 1 auto;
+    }
+
     .bar-row {
         grid-template-columns: 66px 1fr 72px;
+    }
+
+    .output-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .architecture-page h1 {
+        font-size: clamp(2rem, 10vw, 2.4rem);
+        line-height: 1;
+    }
+
+    .diagram-board {
+        padding: 10px;
+    }
+
+    .architecture-diagram {
+        width: 960px;
+        min-width: 0;
+        max-width: none;
     }
 }

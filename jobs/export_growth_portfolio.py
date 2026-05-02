@@ -11,6 +11,7 @@ from common import (
     DEFAULT_GROWTH_RANKED_OUTPUT,
     build_argument_parser,
     create_spark,
+    spark_path,
 )
 
 
@@ -23,7 +24,7 @@ def main() -> None:
 
     spark = create_spark(args.app_name)
     # จำกัด top-N ที่ขั้นนี้ เพื่อให้ Parquet ต้นทางยังเก็บ universe ที่ถูกจัดอันดับครบทั้งชุดได้
-    df = spark.read.parquet(args.input_path).limit(args.top_n)
+    df = spark.read.parquet(spark_path(args.input_path)).limit(args.top_n)
 
     output_file = Path(args.output_file).resolve()
     temp_dir = output_file.parent / f".{output_file.stem}_spark_tmp"
@@ -35,7 +36,7 @@ def main() -> None:
         output_file.unlink()
 
     # ใช้แนวทางเดียวกับ export พอร์ตหลัก: Spark เขียนเป็นโฟลเดอร์ แล้วค่อยย้ายไฟล์ part เดียวมาเป็นไฟล์จริง
-    df.coalesce(1).write.mode("overwrite").option("header", True).csv(str(temp_dir))
+    df.coalesce(1).write.mode("overwrite").option("header", True).csv(spark_path(temp_dir))
 
     part_file = next(temp_dir.glob("part-*.csv"))
     shutil.move(str(part_file), str(output_file))
