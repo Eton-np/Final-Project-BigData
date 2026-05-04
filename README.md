@@ -1,5 +1,10 @@
 # Stock Portfolio Pipeline
-
+จัดทำโดย
+1) นาย ชัยวัฒน์ ทองธาระ รหัสนักศึกษา 6604820001
+2) นางสาว ทมิตา กีรติโชติ รหัสนักศึกษา 6604820002
+3) นาย ณภณ เรืองกิจจานุวัฒน์ รหัสนักศึกษา 6704800029
+4) นาย ธรรมสรณ์ สาครขำ รหัสนักศึกษา 6704800035
+5) นาย จิตติเทพ วสุนันต์ รหัสนักศึกษา 6704800052
 End-to-end Apache Airflow + PySpark project for building a stock analytics pipeline from raw CSV files to partitioned Parquet, portfolio outputs, and an interactive FastAPI dashboard.
 
 ## What This Project Does
