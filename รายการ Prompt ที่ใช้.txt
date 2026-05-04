@@ -1,0 +1,54 @@
+รายการ Prompt ที่ใช้
+ช่วยออกแบบโปรเจกต์วิเคราะห์ข้อมูลหุ้นแบบโดยใช้ Apache Airflow, PySpark และ FastAPI Dashboardให้หน่อยสิ่งที่ต้องทำคือ
+1.วางโครงสร้างโฟลเดอร์โปรเจกต์สำหรับ pipeline หุ้น โดยแยกเป็น dags, jobs, web, scripts, tests และ output
+2.เขียน PySpark job สำหรับอ่านไฟล์ CSV หุ้นจาก StockHistory แล้วแปลงเป็น Parquet
+3.เขียนขั้นตอนทำความสะอาดข้อมูลหุ้น เช่น ลบข้อมูลที่ไม่ถูกต้อง เติมค่าราคาที่หายไป ลบแถวที่ไม่มีการซื้อขาย และจัดรูปแบบวันที่
+4.เขียน PySpark สำหรับคำนวณตัวชี้วัดทางเทคนิคและสร้าง logic สำหรับเลือกพอร์ตหุ้นรายเดือน
+5.เขียน Airflow DAG สำหรับรัน pipeline หลัก ตั้งแต่แปลง CSV เป็น Parquet, clean data, calculate indicators, select portfolio และ export portfolio
+6.ตั้งค่า Docker Compose สำหรับรัน Airflow, Postgres และ FastAPI Dashboard ภายในโปรเจกต์เดียวกัน
+
+เพิ่ม Airflow DAG สำหรับ Growth Portfolio Pipeline และ Dashboard Refresh Pipeline
+แก้ปัญหา Airflow DAG import error และตรวจสอบว่า DAG โหลดได้ถูกต้อง
+สร้าง FastAPI backend สำหรับอ่านไฟล์ JSON/CSV ที่ export จาก pipeline แล้วส่งข้อมูลให้ dashboard
+สร้างหน้า Market Dashboard สำหรับแสดงภาพรวมตลาดหุ้น เช่น market breadth, heatmap, risk-return scatter, movers และตารางหุ้น
+เพิ่ม filter ใน dashboard เช่น เลือกปี, ticker, signal, RSI zone, price band และสถานะว่าอยู่ใน portfolio หรือ growth watchlist
+สร้างหน้า Investment Insights เพื่อแสดงหุ้นที่น่าสนใจ พร้อม label เช่น Worth Watching, Stable และ Caution
+เพิ่มหน้า Architecture สำหรับอธิบายโครงสร้าง pipeline เพื่อใช้ในการนำเสนอโปรเจกต์
+ช่วยปรับ UI ของ dashboard ให้ดูเป็นระบบ อ่านง่าย และเหมาะสำหรับงานนำเสนอ
+ช่วยสร้าง JSON snapshot สำหรับ dashboard เช่น market_dashboard.json และ investment_insights.json
+ช่วยเขียน test เพื่อตรวจสอบโครงสร้างโปรเจกต์และ payload ของ dashboard
+ช่วยเขียน script สำหรับรัน pipeline ทั้งหมดในเครื่อง local ด้วย PowerShell
+ช่วยสร้าง README อธิบายวิธีติดตั้ง วิธีรัน pipeline วิธีเปิด dashboard และคำอธิบาย output ของโปรเจกต์
+ช่วยเพิ่ม .gitignore เพื่อไม่ให้ commit ไฟล์ dataset ขนาดใหญ่, output, virtual environment และไฟล์ generated artifacts
+ช่วยตรวจสอบและปรับ performance ของ Spark job ให้รองรับข้อมูลหุ้นจำนวนมาก
+ช่วยตรวจสอบสถานะ Docker containers, Airflow health endpoint และสถานะ DAG run
+ช่วยเขียนเอกสาร handoff สำหรับบันทึกสถานะ Airflow, DAG ที่กำลังรัน และคำสั่งที่ใช้ตรวจสอบต่อ
+ช่วยตรวจสอบความถูกต้องของ dashboard หลังปรับแก้ และสร้าง screenshot สำหรับใช้ประกอบการนำเสนอ
+
+
+okสิ่งที่อาจารย์บอกใก้แก้ในprojectนี้
+1.แปลงไฟล์stockhistoryเป็นpaquetก่อนเลยเพราะตอนนี้มันเป็นcsvทำให้เวลาอ่านไฟล์มันนานมากจะได้อ่านไฟล์แบบ Columnarแทนแล้วค่อยqueryเอาเฉพาะข้อมูลที่เกี่ยวกับหน้าdashboard
+2.ตอนนี้มีปัญหาในการรันไฟล์เพราะมันเอาทุกก้อนในไฟล์ไปรันหมดเลยทำให้เครื่องรันช้าช่วยทำให้มันรันไฟล์จัดเป็นhadoop groupทีละ512mbแล้วรันเรื่อยๆจนครบทั้งไฟล์
+3.โค้ดควรมีฟังชันในเช็กก่อนว่ามีไฟล์paquentก่อนไหมถ้ามีแล้วก็ไม่ต้องรันอีกจะได้ไม่ไปรันให้เสียเวลา
+4.ไฟล์dashboard datasetโค้ดที่aiให้มาตัวฟังชันในโค้ดยังอ่านไฟล์csvอยู่ทั้งๆที่ต้องอ่านไฟล์paquetที่แปลงแล้วทำให้ใช้เวลาในการรันนานมาก
+5.เช็คทุกjobในแต่ละdagให้ด้วยว่ามันทำงานได้ถูกต้องหรือยังมีตรงไหนควรปรับปรุงแก้ไขไหม
+6.ลบdag stock_etl_skeletonไปเพราะมันเอาไว้แค่โชว์เฉยๆไม่ได้มีอะไร
+7.ตัวหน้าdashboardต้องfilterได้10ปีย้อนหลังตอนนี้มันยังได้แค่2ปีและเช็คหน้าเว็บทั้ง2หน้าว่ามีerrorไหมควรปรับปรุงจุดไหนบ้างแก้หน่อย
+8.เช็คlogicทุกไฟล์ว่ามันoptimizeกันไหมเขียนถูกหรือป่าวต้องแก้ให้มันcompatibleกันทั้งproject
+9.ทำEDA ตัวDataด้วย
+10.หลังจากทำทุกอย่างแล้วให้เช็คทุกอย่างในprojectนี้ให้ด้วยว่าแก้เสร็จเรียบร้อยไหม
+ถ้ามีอะไรแนะนำหรือมีคำถามอะไรถามได้เลย
+
+ช่วยแก้หน้า /insights หรือหน้าหุ้นแนะนำให้แสดงผลเป็น Growth Final Picks จริง ๆ หน่อย
+
+ตอนนี้หน้าเว็บยังดูเหมือนเอา CAGR/radar มาแสดงตรง ๆ ทำให้สับสนว่า 140 ตัวกับ final 20 ต่างกันยังไง อยากให้หน้า “หุ้นแนะนำ” ตอบให้ชัดว่า:
+1. ตัวไหนคือหุ้นที่แนะนำตอนนี้ หรือ shortlist หลัก
+2. ใช้ Top20_Growth_Final_Picks.csv เป็นรายการ final picks
+3. final picks ต้องผ่านทั้ง growth ranking และสัญญาณล่าสุด
+4. แยก radar 140 ตัวออกเป็น “รายการสำรวจเพิ่มเติม” ไม่ใช่ตัวแนะนำหลัก
+5. เพิ่มคะแนนคัดเลือก/Decision Score ที่รวม signal score, growth rank และ risk warning
+6. ถ้าบางตัวโตแรงแต่ยังไม่ผ่านสัญญาณ ให้แยกไว้ อย่าปนกับตัวแนะนำ
+7. ปรับข้อความบนหน้าเว็บให้คนดูเข้าใจง่ายว่า final 20 ใช้คะแนนคัดเลือก ส่วน radar 140 ใช้คะแนนสัญญาณ
+8. ให้ dashboard อ่าน JSON/CSV ล่าสุดหลัง pipeline หรือ Airflow run เสร็จ
+
+ช่วยแก้ทั้ง backend payload, หน้า HTML/JS และทดสอบว่า /insights แสดง final picks ได้ถูกต้อง
