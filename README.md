@@ -39,7 +39,12 @@ The pipeline derives `Ticker` from each CSV filename when the source file does n
 
 ## Architecture / Workflow
 
-GitHub renders this Mermaid diagram directly on the repository front page, so the README shows the project architecture without needing to open the dashboard first.
+The repository front page shows the same architecture view used by the dashboard presentation page.
+
+![Architecture workflow diagram](docs/assets/architecture-workflow.png)
+
+<details>
+<summary>Mermaid workflow source</summary>
 
 ```mermaid
 flowchart TD
@@ -113,6 +118,8 @@ flowchart TD
     insightsJson --> apiGrowth
     architecture -. explains .-> airflow
 ```
+
+</details>
 
 The same architecture is also available as a presentation page in the running dashboard:
 
