@@ -37,6 +37,89 @@ Data/StockHistory/*.csv
 
 The pipeline derives `Ticker` from each CSV filename when the source file does not already include a `Ticker` column.
 
+## Architecture / Workflow
+
+GitHub renders this Mermaid diagram directly on the repository front page, so the README shows the project architecture without needing to open the dashboard first.
+
+```mermaid
+flowchart TD
+    raw["Raw stock CSV files<br/>Data/StockHistory/*.csv"]
+    ticker["Ticker derived from filename<br/>when missing in CSV"]
+
+    subgraph airflow["Apache Airflow orchestration"]
+        direction TB
+
+        subgraph prep["Shared PySpark preparation"]
+            direction LR
+            csv["csv_to_parquet.py"]
+            clean["cleanse_data.py"]
+            indicators["calculate_indicators.py"]
+        end
+
+        subgraph main["DAG 1: stock_portfolio_pipeline"]
+            direction TB
+            select["select_portfolio.py"]
+            portfolioParquet["output/parquet/portfolio"]
+            exportPortfolio["export_portfolio.py"]
+            finalPortfolio["final_portfolio.csv"]
+        end
+
+        subgraph growth["DAG 2: growth_final_picks_pipeline"]
+            direction TB
+            startEnd["extract_growth_start_end.py"]
+            cagr["calculate_growth_cagr.py"]
+            rank["filter_rank_growth.py"]
+            exportGrowth["export_growth_final_picks.py"]
+            finalGrowth["Top20_Growth_Final_Picks.csv"]
+        end
+
+        subgraph dashboard["DAG 3: dashboard_refresh_pipeline"]
+            direction TB
+            marketJob["build_market_dashboard_data.py"]
+            insightsJob["build_investment_insights.py"]
+            marketJson["market_dashboard.json"]
+            insightsJson["investment_insights.json"]
+        end
+    end
+
+    subgraph web["FastAPI + Jinja web dashboard"]
+        direction LR
+        home["GET /"]
+        insights["GET /insights"]
+        architecture["GET /architecture"]
+        apiPortfolio["GET /api/portfolio"]
+        apiGrowth["GET /api/growth-final-picks"]
+    end
+
+    raw --> ticker --> csv
+    csv --> parquet["output/parquet/stocks"]
+    parquet --> clean
+    clean --> cleanParquet["output/parquet/stocks_clean"]
+    cleanParquet --> indicators
+    indicators --> indicatorParquet["output/parquet/stocks_indicators"]
+
+    indicatorParquet --> select --> portfolioParquet --> exportPortfolio --> finalPortfolio
+    cleanParquet --> startEnd --> cagr --> rank --> exportGrowth --> finalGrowth
+
+    indicatorParquet --> marketJob
+    portfolioParquet --> marketJob
+    finalGrowth --> insightsJob
+    marketJob --> marketJson
+    insightsJob --> insightsJson
+
+    marketJson --> home
+    marketJson --> apiPortfolio
+    insightsJson --> insights
+    insightsJson --> apiGrowth
+    architecture -. explains .-> airflow
+```
+
+The same architecture is also available as a presentation page in the running dashboard:
+
+```text
+http://localhost:8000/architecture
+```
+
 ## Project Structure
 
 ```text
