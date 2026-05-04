@@ -160,11 +160,25 @@ input {
         linear-gradient(180deg, rgba(16, 25, 48, 0.98), rgba(9, 22, 34, 0.96));
 }
 
+.decision-guide-panel {
+    background:
+        radial-gradient(circle at top right, rgba(142, 245, 141, 0.13), transparent 30%),
+        linear-gradient(180deg, rgba(9, 34, 34, 0.98), rgba(9, 22, 34, 0.96));
+}
+
 .hero-panel h2 {
     margin-bottom: 14px;
     max-width: 14ch;
     font-size: clamp(1.8rem, 4vw, 3rem);
     line-height: 1;
+}
+
+.hero-panel-insights h2 {
+    max-width: 20ch;
+}
+
+.decision-guide-panel .panel-heading p {
+    text-align: left;
 }
 
 .hero-copy {
@@ -214,6 +228,29 @@ input {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.guide-stack {
+    display: grid;
+    gap: 12px;
+}
+
+.guide-stack div {
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.045);
+}
+
+.guide-stack strong,
+.guide-stack span {
+    display: block;
+}
+
+.guide-stack span {
+    margin-top: 6px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
 label {
     display: grid;
     gap: 8px;
@@ -252,6 +289,52 @@ select option:focus {
     margin-bottom: 18px;
 }
 
+.selection-flow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.flow-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.flow-card > span {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    color: var(--cyan);
+    background: rgba(81, 208, 255, 0.1);
+    border: 1px solid rgba(81, 208, 255, 0.22);
+}
+
+.flow-card small,
+.flow-card em {
+    display: block;
+    color: var(--muted);
+    font-style: normal;
+}
+
+.flow-card strong {
+    display: block;
+    margin: 8px 0 6px;
+    font-size: 1.55rem;
+}
+
+.flow-card.positive strong {
+    color: var(--lime);
+}
+
 .metric-card {
     padding: 18px;
 }
@@ -266,6 +349,330 @@ select option:focus {
     display: block;
     margin-top: 10px;
     color: var(--muted);
+}
+
+.final-picks-section {
+    margin-bottom: 18px;
+}
+
+.recommendation-strip {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.recommendation-card {
+    min-width: 0;
+    min-height: 172px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.045);
+}
+
+.recommendation-card.positive {
+    background: linear-gradient(180deg, rgba(142, 245, 141, 0.12), rgba(255, 255, 255, 0.04));
+    border-color: rgba(142, 245, 141, 0.28);
+}
+
+.recommendation-card.negative {
+    background: linear-gradient(180deg, rgba(255, 127, 142, 0.12), rgba(255, 255, 255, 0.04));
+    border-color: rgba(255, 127, 142, 0.28);
+}
+
+.recommendation-card span {
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.recommendation-card h4 {
+    margin-top: 14px;
+    font-size: 2rem;
+}
+
+.recommendation-card strong {
+    display: block;
+    margin-top: 8px;
+    color: var(--text);
+    line-height: 1.25;
+}
+
+.recommendation-card p {
+    margin-top: 16px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.growth-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.score-explain-card {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 16px 0 18px;
+    padding: 14px;
+    border: 1px solid rgba(142, 245, 141, 0.22);
+    border-radius: 14px;
+    background: rgba(142, 245, 141, 0.055);
+}
+
+.score-explain-card div {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    padding: 10px 12px;
+    border-left: 2px solid rgba(142, 245, 141, 0.45);
+}
+
+.score-explain-card strong {
+    color: var(--text);
+    font-size: 0.98rem;
+}
+
+.score-explain-card span {
+    color: var(--muted);
+    line-height: 1.55;
+}
+
+.finalist-list {
+    display: grid;
+    gap: 10px;
+}
+
+.finalist-card {
+    display: grid;
+    grid-template-columns: 0.8fr auto minmax(360px, 1.8fr);
+    gap: 16px;
+    align-items: center;
+    min-height: 74px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.finalist-card.positive {
+    border-color: rgba(142, 245, 141, 0.2);
+}
+
+.finalist-rank,
+.finalist-answer,
+.finalist-score,
+.supporting-metrics {
+    min-width: 0;
+}
+
+.finalist-rank span,
+.finalist-answer small,
+.supporting-metrics span {
+    color: var(--muted);
+}
+
+.finalist-rank strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 1.35rem;
+    color: var(--text);
+}
+
+.finalist-answer {
+    display: grid;
+    justify-items: start;
+    gap: 8px;
+}
+
+.finalist-score {
+    display: grid;
+    gap: 10px;
+}
+
+.primary-score {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.primary-score span {
+    color: var(--muted);
+}
+
+.primary-score strong {
+    color: var(--lime);
+    font-size: 1.7rem;
+}
+
+.score-meter {
+    height: 18px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.score-meter-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, rgba(142, 245, 141, 0.38), var(--lime));
+}
+
+.supporting-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.supporting-metrics span {
+    display: inline-flex;
+    gap: 6px;
+    align-items: baseline;
+    color: var(--muted);
+}
+
+.supporting-metrics strong {
+    color: var(--text);
+}
+
+.finalist-note {
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+.finalist-risk {
+    margin-top: 8px;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+.finalist-risk.has-warning {
+    color: var(--amber);
+}
+
+.paused-section {
+    margin-bottom: 18px;
+}
+
+.paused-list {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.paused-card {
+    min-width: 0;
+    padding: 14px 16px;
+    border: 1px solid rgba(255, 207, 102, 0.18);
+    border-radius: 16px;
+    background: rgba(255, 207, 102, 0.055);
+}
+
+.paused-card div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.paused-card span,
+.paused-card small {
+    color: var(--muted);
+}
+
+.paused-card p {
+    margin-top: 10px;
+    min-height: 48px;
+    line-height: 1.55;
+}
+
+.paused-card small {
+    display: block;
+    margin-top: 10px;
+}
+
+.details-panel {
+    margin-top: 18px;
+}
+
+.details-panel > summary {
+    display: grid;
+    gap: 6px;
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+}
+
+.details-panel > summary span {
+    font-weight: 700;
+}
+
+.details-panel > summary small {
+    color: var(--muted);
+}
+
+.details-panel[open] > summary {
+    margin-bottom: 18px;
+}
+
+.explain-card {
+    margin-bottom: 18px;
+    padding: 18px 20px;
+    border: 1px solid rgba(255, 207, 102, 0.24);
+    border-radius: 18px;
+    background: rgba(255, 207, 102, 0.065);
+}
+
+.explain-card strong {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.explain-card p {
+    max-width: 920px;
+    color: var(--muted);
+    line-height: 1.65;
+}
+
+.explain-card b {
+    color: var(--text);
+}
+
+.detail-filter-card,
+.detail-summary-grid {
+    margin-bottom: 18px;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    white-space: nowrap;
+}
+
+.status-pill.positive {
+    border-color: rgba(142, 245, 141, 0.3);
+    background: rgba(142, 245, 141, 0.08);
+}
+
+.status-pill.negative {
+    border-color: rgba(255, 127, 142, 0.3);
+    background: rgba(255, 127, 142, 0.08);
+}
+
+.empty-state {
+    color: var(--muted);
+    line-height: 1.6;
 }
 
 .metric-card.positive strong,
@@ -415,6 +822,36 @@ select option:focus {
     grid-template-columns: 82px minmax(120px, 1fr) 112px;
     gap: 12px;
     align-items: center;
+}
+
+.radar-bar-row {
+    grid-template-columns: minmax(96px, 0.55fr) minmax(140px, 1fr) minmax(116px, auto);
+}
+
+.radar-bar-row > span {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.radar-bar-row > span strong {
+    color: var(--text);
+}
+
+.radar-bar-row > span small {
+    color: var(--muted);
+    font-size: 0.72rem;
+    line-height: 1.35;
+}
+
+.radar-signal-score,
+.radar-score-label {
+    color: var(--cyan);
+    white-space: nowrap;
+}
+
+.radar-score-label {
+    font-size: 1.1rem;
 }
 
 .bar-track {
@@ -832,6 +1269,12 @@ tbody tr:hover {
     .insight-overview-grid,
     .insight-detail-grid,
     .metric-grid,
+    .selection-flow,
+    .growth-summary-grid,
+    .score-explain-card,
+    .recommendation-strip,
+    .paused-list,
+    .finalist-card,
     .insight-ribbon,
     .architecture-flow,
     .architecture-grid,
@@ -853,6 +1296,9 @@ tbody tr:hover {
 
     .topbar,
     .filter-grid,
+    .selection-flow,
+    .recommendation-strip,
+    .paused-list,
     .distribution-card .mix-grid,
     .mix-grid,
     .heatmap-grid,
@@ -871,6 +1317,16 @@ tbody tr:hover {
 
     .bar-row {
         grid-template-columns: 66px 1fr 72px;
+    }
+
+    .radar-bar-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .finalist-card,
+    .finalist-score {
+        grid-template-columns: 1fr;
     }
 
     .output-grid {

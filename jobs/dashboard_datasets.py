@@ -15,7 +15,7 @@ from typing import Any
 
 from jobs.common import (
     DEFAULT_EXPORT_OUTPUT,
-    DEFAULT_GROWTH_EXPORT_OUTPUT,
+    DEFAULT_GROWTH_FINAL_PICKS_OUTPUT,
     DEFAULT_INVESTMENT_INSIGHTS_READY_MARKER,
     DEFAULT_INVESTMENT_INSIGHTS_OUTPUT,
     DEFAULT_MARKET_DASHBOARD_READY_MARKER,
@@ -28,6 +28,7 @@ TODAYS_STOCKS_PATH = PROJECT_ROOT / "Data" / "Todays_stocks.csv"
 STOCK_HISTORY_DIR = PROJECT_ROOT / "Data" / "StockHistory"
 MAX_REASONABLE_CAGR = 5.0
 MIN_LOOKBACK_COVERAGE = 0.8
+DEFAULT_GROWTH_SIGNAL_POOL_SIZE = 140
 
 
 def _use_spark_dashboard_builder() -> bool:
@@ -402,9 +403,14 @@ def _load_latest_portfolio_rows(portfolio_csv: Path = DEFAULT_EXPORT_OUTPUT) -> 
     )
 
 
-def _load_growth_rows(growth_csv: Path = DEFAULT_GROWTH_EXPORT_OUTPUT) -> list[dict[str, Any]]:
-    # CSV fallback helper: อ่าน Top20_Growth_Portfolio.csv ที่ export จาก DAG 2
-    # ใช้เช็กว่าหุ้นในตลาดชุดปัจจุบันซ้ำกับ growth watchlist หรือไม่
+def _load_growth_rows(growth_csv: Path = DEFAULT_GROWTH_FINAL_PICKS_OUTPUT) -> list[dict[str, Any]]:
+    # CSV fallback helper: อ่าน growth final picks ที่ export จาก DAG 2
+    # ใช้เช็กว่าหุ้นในตลาดชุดปัจจุบันซ้ำกับ final picks หรือไม่
+    return load_growth_final_pick_rows(growth_csv)
+
+
+def load_growth_final_pick_rows(growth_csv: Path = DEFAULT_GROWTH_FINAL_PICKS_OUTPUT) -> list[dict[str, Any]]:
+    # อ่าน Top20_Growth_Final_Picks.csv ให้เป็น payload พร้อมใช้ทั้งใน JSON API และหน้าเว็บ
     if not growth_csv.exists():
         return []
 
@@ -415,17 +421,45 @@ def _load_growth_rows(growth_csv: Path = DEFAULT_GROWTH_EXPORT_OUTPUT) -> list[d
             ticker = (raw.get("Ticker") or "").strip()
             if not ticker:
                 continue
+            start_price = _safe_float(raw.get("Start_Price"))
+            end_price = _safe_float(raw.get("End_Price"))
+            return_multiple = end_price / start_price if start_price and start_price > 0 and end_price else None
             rows.append(
                 {
+                    "final_rank": _safe_int(raw.get("Final_Rank")),
                     "ticker": ticker,
-                    "growth_rank": _safe_int(raw.get("Growth_Rank")) or 0,
-                    "cagr_percentage": _safe_float(raw.get("CAGR_Percentage")) or 0.0,
+                    "start_date": raw.get("Start_Date"),
+                    "start_price": start_price,
+                    "end_date": raw.get("End_Date"),
+                    "end_price": end_price,
                     "years_active": _safe_float(raw.get("Years_Active")) or 0.0,
-                    "end_price": _safe_float(raw.get("End_Price")) or 0.0,
+                    "cagr_percentage": _safe_float(raw.get("CAGR_Percentage")) or 0.0,
+                    "growth_rank": _safe_int(raw.get("Growth_Rank")) or 0,
+                    "return_multiple": return_multiple,
+                    "total_return_pct": return_multiple - 1 if return_multiple is not None else None,
+                    "decision_score": _safe_float(raw.get("Decision_Score")),
+                    "insight_score": _safe_float(raw.get("Insight_Score")),
+                    "insight_label": raw.get("Insight_Label"),
+                    "recommendation": raw.get("Recommendation"),
+                    "recommendation_key": raw.get("Recommendation_Key"),
+                    "signal": raw.get("Signal"),
                 }
             )
-    return sorted(rows, key=lambda row: (row["growth_rank"], row["ticker"]))
+    return sorted(rows, key=lambda row: (row.get("final_rank") or 999999, row["growth_rank"] or 999999, row["ticker"]))
 
+
+def build_growth_final_picks_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    cagr_values = [row.get("cagr_percentage") for row in rows if row.get("cagr_percentage") is not None]
+    years_values = [row.get("years_active") for row in rows if row.get("years_active") is not None]
+    best_row = rows[0] if rows else {}
+    return {
+        "count": len(rows),
+        "best_ticker": best_row.get("ticker"),
+        "best_cagr": best_row.get("cagr_percentage"),
+        "best_return_multiple": best_row.get("return_multiple"),
+        "average_cagr": _round(sum(cagr_values) / len(cagr_values) if cagr_values else 0.0, 4),
+        "median_years_active": _round(median(years_values) if years_values else 0.0, 2),
+    }
 
 def _load_today_market_rows(todays_csv: Path = TODAYS_STOCKS_PATH) -> list[dict[str, Any]]:
     # CSV fallback helper: อ่าน Data/Todays_stocks.csv เป็น universe หุ้นปัจจุบัน
@@ -693,7 +727,7 @@ def build_market_dashboard_dataset() -> dict[str, Any]:
 
 
 def _insight_score(row: dict[str, Any]) -> tuple[float, list[str], list[str]]:
-    # โมเดลให้คะแนนสำหรับหน้า Investment Insights
+    # โมเดลให้คะแนนสำหรับ radar และ growth final picks บนหน้า /insights
     # ผสมทั้ง momentum, risk, technical indicators และการอยู่ใน watchlist เข้าด้วยกัน
     score = 50.0
     reasons: list[str] = []
@@ -704,7 +738,7 @@ def _insight_score(row: dict[str, Any]) -> tuple[float, list[str], list[str]]:
         reasons.append("Already selected in the core portfolio")
     if row["in_growth_watchlist"]:
         score += 12
-        reasons.append("Also appears in the growth watchlist")
+        reasons.append("Also appears in the tracked growth universe")
 
     return_pct = row["return_pct"] or 0.0
     range_pct = row["range_pct"] or 0.0
@@ -767,6 +801,56 @@ def _insight_label(score: float) -> str:
     return "Caution"
 
 
+def _growth_recommendation(insight_label: str | None, insight_score: float | None, warning_count: int) -> tuple[str, str]:
+    if insight_label == "Worth Watching" and (insight_score or 0) >= 75 and warning_count <= 1:
+        return "consider_first", "Consider First"
+    if insight_label == "Worth Watching":
+        return "watch_risk", "High Growth, Watch Risk"
+    if insight_label == "Stable":
+        return "watch_timing", "Watch Timing"
+    if insight_label == "Caution":
+        return "wait_setup", "Wait for Setup"
+    return "needs_review", "Needs Review"
+
+
+def enrich_growth_final_pick_rows(
+    growth_final_picks: list[dict[str, Any]],
+    market_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    market_lookup = {row["ticker"]: row for row in market_rows if row.get("ticker")}
+    enriched_rows: list[dict[str, Any]] = []
+    for row in growth_final_picks:
+        market_row = market_lookup.get(row["ticker"])
+        if not market_row:
+            enriched_rows.append(
+                {**row, "recommendation_key": "needs_review", "recommendation": "Needs Review", "decision_score": None}
+            )
+            continue
+
+        score, reasons, warnings = _insight_score(market_row)
+        label = _insight_label(score)
+        growth_pool_size = _safe_int(os.getenv("GROWTH_SIGNAL_POOL_SIZE")) or DEFAULT_GROWTH_SIGNAL_POOL_SIZE
+        rank_score = max(0.0, ((growth_pool_size + 1) - (row.get("growth_rank") or growth_pool_size + 1)) / growth_pool_size) * 100
+        decision_score = _scale((score * 0.65) + (rank_score * 0.35) - (len(warnings) * 4), 0, 100)
+        recommendation_key, recommendation = _growth_recommendation(label, score, len(warnings))
+        enriched_rows.append(
+            {
+                **row,
+                "insight_score": round(score, 2),
+                "insight_label": label,
+                "reasons": reasons,
+                "warnings": warnings,
+                "signal": market_row.get("signal"),
+                "rsi_14": market_row.get("rsi_14"),
+                "macd_12_26_9": market_row.get("macd_12_26_9"),
+                "range_pct": market_row.get("range_pct"),
+                "recommendation_key": recommendation_key,
+                "recommendation": recommendation,
+                "decision_score": round(decision_score, 2),
+            }
+        )
+    return sorted(enriched_rows, key=lambda item: (-(item.get("decision_score") or 0), item.get("growth_rank") or 999999))
+
 def build_investment_insights_dataset() -> dict[str, Any]:
     if _use_spark_dashboard_builder():
         # Production/default path: ใช้ Spark อ่าน Parquet แล้วสร้าง insight payload
@@ -814,6 +898,7 @@ def build_investment_insights_dataset() -> dict[str, Any]:
     candidates = worth_watching[:60] + stable_ranked[:40] + caution_ranked[-40:]
     caution_list = caution_ranked[-8:]
     stable_names = stable_ranked[:8]
+    growth_final_picks = enrich_growth_final_pick_rows(load_growth_final_pick_rows(), enriched)
 
     summary = {
         "tracked_count": len(enriched),
@@ -856,6 +941,8 @@ def build_investment_insights_dataset() -> dict[str, Any]:
         ],
         "candidates": [_without_history_metrics(row) for row in candidates],
         "spotlight": [_without_history_metrics(row) for row in spotlight],
+        "growth_final_picks": growth_final_picks,
+        "growth_final_picks_summary": build_growth_final_picks_summary(growth_final_picks),
         "worth_watching": [_without_history_metrics(row) for row in worth_watching[:8]],
         "stable_watch": [_without_history_metrics(row) for row in stable_names],
         "caution_list": [_without_history_metrics(row) for row in caution_list],
@@ -990,6 +1077,8 @@ def load_or_build_investment_insights(
         ],
         "candidates": [],
         "spotlight": [],
+        "growth_final_picks": [],
+        "growth_final_picks_summary": build_growth_final_picks_summary([]),
         "worth_watching": [],
         "stable_watch": [],
         "caution_list": [],

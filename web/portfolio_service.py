@@ -7,8 +7,11 @@ from datetime import datetime, timezone
 import os
 
 from jobs.dashboard_datasets import (
+    build_growth_final_picks_summary,
+    enrich_growth_final_pick_rows,
     load_or_build_investment_insights,
     load_or_build_market_dashboard,
+    load_growth_final_pick_rows,
 )
 
 WEB_SESSION_STARTED_AT = datetime.now(timezone.utc)
@@ -41,7 +44,8 @@ INSIGHT_LABELS = {
 
 INSIGHT_TEXT = {
     "Already selected in the core portfolio": "อยู่ในพอร์ตหลักแล้ว",
-    "Also appears in the growth watchlist": "อยู่ในรายชื่อเฝ้าดูหุ้นเติบโตด้วย",
+    "Also appears in the growth watchlist": "อยู่ในกลุ่มหุ้นเติบโตที่ระบบติดตาม",
+    "Also appears in the tracked growth universe": "อยู่ในกลุ่มหุ้นเติบโตที่ระบบติดตาม",
     "Strong intraday move": "ราคาเคลื่อนไหวเด่นระหว่างวัน",
     "Strong historical return profile": "ผลตอบแทนย้อนหลังเด่น",
     "Selling pressure is elevated": "แรงขายค่อนข้างสูง",
@@ -62,6 +66,11 @@ INSIGHT_TEXT = {
     "The insights score blends historical annualized return, latest range, RSI, MACD, CCI, and membership in the existing portfolio watchlists.": "คะแนนอินไซต์ผสานผลตอบแทนย้อนหลังแบบต่อปี ช่วงแกว่งล่าสุด RSI, MACD, CCI และสถานะในรายชื่อเฝ้าดูที่มีอยู่เข้าด้วยกัน",
     "Worth Watching names combine better momentum with cleaner risk signals, Stable names look mixed, and Caution names show heavier downside pressure or speculative risk.": "กลุ่มน่าจับตาจะมีโมเมนตัมดีกว่าและสัญญาณความเสี่ยงสะอาดกว่า กลุ่มค่อนข้างนิ่งมีภาพรวมผสมกัน ส่วนกลุ่มควรระวังมักเผชิญแรงกดดันขาลงหรือความเสี่ยงเชิงเก็งกำไรสูงกว่า",
     "Airflow refreshes these JSON outputs so the dashboard reads the same prepared snapshot every time the pipeline completes.": "Airflow จะรีเฟรชไฟล์ JSON เหล่านี้ เพื่อให้แดชบอร์ดอ่าน snapshot ชุดเดียวกันทุกครั้งที่ pipeline ทำงานเสร็จ",
+    "Consider First": "เริ่มพิจารณาก่อน",
+    "High Growth, Watch Risk": "โตแรงแต่ต้องดูความเสี่ยง",
+    "Watch Timing": "รอจังหวะให้ชัดขึ้น",
+    "Wait for Setup": "ยังไม่ควรรีบเข้า",
+    "Needs Review": "ต้องตรวจเพิ่ม",
 }
 
 
@@ -101,10 +110,14 @@ def _localize_market_payload(payload: dict) -> dict:
 
 
 def _localize_insight_payload(payload: dict) -> dict:
+    growth_final_picks = payload.get("growth_final_picks", [])
+    growth_final_picks_summary = payload.get("growth_final_picks_summary", {})
     localized = {
         "generated_at": payload.get("generated_at"),
         "data_as_of": payload.get("data_as_of"),
         "summary": payload.get("summary", {}),
+        "growth_final_picks": growth_final_picks,
+        "growth_final_picks_summary": growth_final_picks_summary,
         "empty_state": payload.get("empty_state", False),
     }
     localized["filters"] = {
@@ -132,7 +145,54 @@ def _localize_insight_payload(payload: dict) -> dict:
         }
         for row in payload.get("candidates", [])
     ]
+    localized["growth_final_picks"] = [
+        {
+            **row,
+            "signal": _translate(row.get("signal", "")),
+            "insight_label": _translate(row.get("insight_label", "")),
+            "recommendation": _translate(row.get("recommendation", "")),
+            "reasons": [_translate(value) for value in row.get("reasons", [])],
+            "warnings": [_translate(value) for value in row.get("warnings", [])],
+        }
+        for row in localized["growth_final_picks"]
+    ]
     return localized
+
+
+def _with_growth_final_picks_export(payload: dict) -> dict:
+    # snapshot เก่าบางชุดยังไม่มี final picks ใน JSON จึงเติมจาก CSV export ล่าสุดให้หน้าเว็บใช้ได้ทันที
+    growth_final_picks = payload.get("growth_final_picks") or load_growth_final_pick_rows()
+    if growth_final_picks and any(row.get("decision_score") is None for row in growth_final_picks):
+        growth_final_picks = enrich_growth_final_pick_rows(
+            growth_final_picks,
+            build_market_dashboard_payload().get("securities", []),
+        )
+    summary = (
+        payload.get("growth_final_picks_summary")
+        or build_growth_final_picks_summary(growth_final_picks)
+    )
+    current_payload = {
+        key: payload.get(key)
+        for key in (
+            "generated_at",
+            "data_as_of",
+            "summary",
+            "score_distribution",
+            "candidates",
+            "spotlight",
+            "worth_watching",
+            "stable_watch",
+            "caution_list",
+            "model_notes",
+            "filters",
+            "empty_state",
+        )
+    }
+    return {
+        **current_payload,
+        "growth_final_picks": growth_final_picks,
+        "growth_final_picks_summary": summary,
+    }
 
 
 def build_market_dashboard_payload() -> dict:
@@ -145,7 +205,7 @@ def build_market_dashboard_payload() -> dict:
 def build_investment_insights_payload() -> dict:
     # ค่าเริ่มต้นอ่าน snapshot ล่าสุดที่ Airflow/local pipeline ทำไว้แล้ว
     min_ready_time = WEB_SESSION_STARTED_AT if _fresh_session_marker_required() else None
-    return load_or_build_investment_insights(min_ready_time=min_ready_time)
+    return _with_growth_final_picks_export(load_or_build_investment_insights(min_ready_time=min_ready_time))
 
 
 def _fresh_session_marker_required() -> bool:
@@ -157,7 +217,7 @@ def build_dashboard_payload() -> dict:
     return build_market_dashboard_payload()
 
 
-def build_growth_dashboard_payload() -> dict:
+def build_growth_final_picks_payload() -> dict:
     return build_investment_insights_payload()
 
 

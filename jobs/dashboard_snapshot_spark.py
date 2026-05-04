@@ -23,6 +23,11 @@ from jobs.common import (
     create_spark,
     spark_path,
 )
+from jobs.dashboard_datasets import (
+    build_growth_final_picks_summary,
+    enrich_growth_final_pick_rows,
+    load_growth_final_pick_rows,
+)
 
 
 def _safe_float(value: str | None) -> float | None:
@@ -96,7 +101,7 @@ def _insight_score(row: dict[str, Any]) -> tuple[float, list[str], list[str]]:
         reasons.append("Already selected in the core portfolio")
     if row["in_growth_watchlist"]:
         score += 12
-        reasons.append("Also appears in the growth watchlist")
+        reasons.append("Also appears in the tracked growth universe")
 
     return_pct = row["return_pct"] or 0.0
     range_pct = row["range_pct"] or 0.0
@@ -545,6 +550,7 @@ def build_investment_insights_dataset_spark() -> dict[str, Any]:
     candidates = worth_watching[:60] + stable_ranked[:40] + caution_ranked[-40:]
     caution_list = caution_ranked[-8:]
     stable_names = stable_ranked[:8]
+    growth_final_picks = enrich_growth_final_pick_rows(load_growth_final_pick_rows(), enriched)
 
     summary = {
         "tracked_count": len(enriched),
@@ -585,6 +591,8 @@ def build_investment_insights_dataset_spark() -> dict[str, Any]:
         ],
         "candidates": [_without_history_metrics(row) for row in candidates],
         "spotlight": [_without_history_metrics(row) for row in spotlight],
+        "growth_final_picks": growth_final_picks,
+        "growth_final_picks_summary": build_growth_final_picks_summary(growth_final_picks),
         "worth_watching": [_without_history_metrics(row) for row in worth_watching[:8]],
         "stable_watch": [_without_history_metrics(row) for row in stable_names],
         "caution_list": [_without_history_metrics(row) for row in caution_list],

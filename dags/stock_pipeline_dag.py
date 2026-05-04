@@ -43,7 +43,7 @@ PYTHON_JOBS = {
     "extract_growth_start_end": JOBS_DIR / "extract_growth_start_end.py",
     "calculate_growth_cagr": JOBS_DIR / "calculate_growth_cagr.py",
     "filter_rank_growth": JOBS_DIR / "filter_rank_growth.py",
-    "export_growth_portfolio": JOBS_DIR / "export_growth_portfolio.py",
+    "export_growth_final_picks": JOBS_DIR / "export_growth_final_picks.py",
     "build_market_dashboard_data": JOBS_DIR / "build_market_dashboard_data.py",
     "build_investment_insights": JOBS_DIR / "build_investment_insights.py",
 }
@@ -118,22 +118,22 @@ with DAG(
 
     start >> ingest >> cleanse >> indicators >> select >> export >> end
 
-# DAG นี้เป็น pipeline สำหรับกลยุทธ์ growth ที่เน้นการคัดเลือกหุ้นที่มี CAGR ระยะยาวดีที่สุด
+# DAG นี้เป็น pipeline สำหรับคัด growth final picks ด้วยอันดับเติบโตและสัญญาณล่าสุด
 with DAG(
-    dag_id="growth_portfolio_pipeline",
-    description="Growth strategy pipeline that ranks stocks by long-term CAGR",
+    dag_id="growth_final_picks_pipeline",
+    description="Builds growth final picks by combining long-term growth ranking with latest signal scoring",
     start_date=datetime(2024, 1, 1),
     schedule=None,
     catchup=False,
     tags=["stocks", "spark", "growth"],
 ) as growth_dag:
-    # pipeline กลยุทธ์ growth
+    # pipeline สำหรับ growth final picks
     # 1.) ingest ไฟล์ CSV ดิบ (ใช้ task เดียวกับ production_dag เพื่อให้แน่ใจว่าใช้ข้อมูลชุดเดียวกัน)
     # 2.) ตรวจสอบว่าข้อมูลที่ผ่านการ clean แล้วมีอยู่หรือไม่ ถ้าไม่มีให้สร้างขึ้นมาใหม่ (เพื่อให้แน่ใจว่า pipeline นี้สามารถรันได้แม้ไม่เคยรัน pipeline หลักมาก่อน)
     # 3.) ดึงข้อมูลราคาหุ้นในอดีตมาคำนวณจุดเริ่มต้นและจุดสิ้นสุดของช่วงเวลาที่จะคำนวณ CAGR
     # 4.) คำนวณ CAGR ของแต่ละหุ้น
-    # 5.) คัดเลือกหุ้นที่มี CAGR สูงสุดมาเป็นพอร์ตโฟลิโอ
-    # 6.) export ออกมาเป็น CSV สำหรับใช้งานจริง
+    # 5.) จัดอันดับ growth universe
+    # 6.) export final picks ด้วย logic เดียวกับหน้า /insights
     start = EmptyOperator(task_id="start")
     ensure_parquet = build_spark_task("ensure_stockhistory_parquet", PYTHON_JOBS["csv_to_parquet"])
     ensure_clean = build_clean_data_if_missing_task("ensure_clean_data", RAW_PARQUET_OUTPUT, SHARED_CLEAN_OUTPUT)
@@ -144,7 +144,7 @@ with DAG(
     )
     cagr = build_spark_task("calculate_growth_cagr", PYTHON_JOBS["calculate_growth_cagr"])
     rank = build_spark_task("filter_rank_growth", PYTHON_JOBS["filter_rank_growth"])
-    export = build_spark_task("export_growth_portfolio", PYTHON_JOBS["export_growth_portfolio"])
+    export = build_spark_task("export_growth_final_picks", PYTHON_JOBS["export_growth_final_picks"])
     end = EmptyOperator(task_id="end")
 
     start >> ensure_parquet >> ensure_clean >> extract >> cagr >> rank >> export >> end
@@ -152,7 +152,7 @@ with DAG(
 # DAG นี้เป็น pipeline สำหรับ refresh snapshot ที่หน้าเว็บอ่านใช้งาน เช่น dashboard และ insights ต่างๆ
 with DAG(
     dag_id="dashboard_refresh_pipeline",
-    description="Refreshes the prepared Market Dashboard and Investment Insights snapshots",
+    description="Refreshes the prepared Market Dashboard and Growth Final Picks snapshots",
     start_date=datetime(2024, 1, 1),
     schedule=None,
     catchup=False,
@@ -161,7 +161,7 @@ with DAG(
     #pipeline สำหรับ refresh snapshot ที่หน้าเว็บอ่านใช้งาน เช่น dashboard และ insights ต่างๆ
     #1.) ตรวจสอบว่าข้อมูลที่ผ่านการ clean แล้วมีอยู่หรือไม่ ถ้าไม่มีให้สร้างขึ้นมาใหม่ (เพื่อให้แน่ใจว่า pipeline นี้สามารถรันได้แม้ไม่เคยรัน pipeline หลักมาก่อน)
     #2.) สร้าง dataset สำหรับหน้า dashboard ซึ่งจะถูกนำไปใช้แสดงผลในหน้าเว็บ และ API ที่เกี่ยวข้อง
-    #3.) สร้าง dataset สำหรับหน้า investment insights ซึ่งจะถูกนำไปใช้แสดงผลในหน้าเว็บ และ API ที่เกี่ยวข้อง
+    #3.) สร้าง dataset สำหรับหน้า /insights ซึ่งจะถูกนำไปใช้แสดง final picks, radar และ API ที่เกี่ยวข้อง
     start = EmptyOperator(task_id="start")
     ensure_parquet = build_spark_task("ensure_stockhistory_parquet", PYTHON_JOBS["csv_to_parquet"])
     build_market = build_spark_task(

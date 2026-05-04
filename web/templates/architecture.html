@@ -15,13 +15,13 @@
             </div>
             <nav class="page-links">
                 <a href="/">ภาพรวมตลาด</a>
-                <a href="/insights">สัญญาณการลงทุน</a>
+                <a href="/insights">หุ้นแนะนำ</a>
                 <a href="/architecture" class="active">Architecture</a>
             </nav>
         </section>
 
         <p class="architecture-subtitle">
-            เส้นทางข้อมูลจริงของ DAG: StockHistory CSV ถูกแปลงเป็น Parquet, DAG 1/2 สร้าง portfolio และ growth outputs, DAG 3 อ่าน Parquet เหล่านั้นเพื่อสร้าง JSON snapshots ให้หน้า Dashboard
+            เส้นทางข้อมูลจริงของ DAG: StockHistory CSV ถูกแปลงเป็น Parquet, DAG 1 สร้างพอร์ตหลัก, DAG 2 สร้าง growth final picks, และ DAG 3 สร้าง JSON snapshots ให้หน้า Dashboard
         </p>
 
         <section class="diagram-board">
@@ -55,7 +55,7 @@
 
                 <text x="720" y="72" class="diagram-title" text-anchor="middle">Stock Portfolio Pipeline</text>
                 <text x="720" y="106" class="diagram-caption" text-anchor="middle">
-                    StockHistory CSV -> Parquet -> DAG 1 Portfolio + DAG 2 Growth -> DAG 3 JSON Snapshots -> FastAPI Dashboard
+                    StockHistory CSV -> Parquet -> Core Portfolio + Growth Final Picks -> JSON Snapshots -> FastAPI Dashboard
                 </text>
 
                 <g class="group-box source-group">
@@ -129,7 +129,7 @@
 
                 <g class="group-box">
                     <rect x="540" y="618" width="360" height="330" rx="10"></rect>
-                    <text x="720" y="648" text-anchor="middle" class="group-title">DAG 2: growth_portfolio_pipeline</text>
+                    <text x="720" y="648" text-anchor="middle" class="group-title">DAG 2: growth_final_picks_pipeline</text>
                     <rect x="585" y="672" width="270" height="44" rx="6" fill="url(#jobBox)" class="node-stroke"></rect>
                     <text x="720" y="699" text-anchor="middle" class="job-text">extract_growth_start_end.py</text>
                     <text x="720" y="718" text-anchor="middle" class="job-text">calculate_growth_cagr.py</text>
@@ -140,9 +140,10 @@
                     <ellipse cx="720" cy="874" rx="138" ry="20" fill="url(#dataBox)" class="data-stroke"></ellipse>
                     <text x="720" y="856" text-anchor="middle" class="data-text">output/parquet/growth_ranked</text>
                     <rect x="585" y="894" width="270" height="34" rx="6" fill="url(#jobBox)" class="node-stroke"></rect>
-                    <text x="720" y="916" text-anchor="middle" class="job-text">export_growth_portfolio.py</text>
+                    <text x="720" y="916" text-anchor="middle" class="job-text">export_growth_final_picks.py</text>
                     <rect x="585" y="932" width="270" height="34" rx="6" fill="url(#sourceBox)" class="node-stroke"></rect>
-                    <text x="720" y="954" text-anchor="middle" class="node-text">Top20_Growth_Portfolio.csv</text>
+                    <text x="720" y="948" text-anchor="middle" class="node-text">Top20_Growth_</text>
+                    <text x="720" y="964" text-anchor="middle" class="node-text">Final_Picks.csv</text>
                 </g>
 
                 <g class="group-box">
@@ -177,8 +178,8 @@
                 <rect x="805" y="1110" width="160" height="34" rx="6" fill="url(#apiBox)" class="node-stroke api-node"></rect>
                 <text x="885" y="1132" text-anchor="middle" class="api-text">GET /insights</text>
                 <rect x="985" y="1110" width="230" height="34" rx="6" fill="url(#apiBox)" class="node-stroke api-node"></rect>
-                <text x="1100" y="1132" text-anchor="middle" class="api-text">GET /api/investment-insights</text>
-                <text x="720" y="1168" text-anchor="middle" class="step-label">Legacy aliases: GET /growth and GET /api/growth-portfolio return the same insights payload</text>
+                <text x="1100" y="1132" text-anchor="middle" class="api-text">GET /api/growth-final-picks</text>
+                <text x="720" y="1168" text-anchor="middle" class="step-label">Current APIs: /api/investment-insights, /api/growth-final-picks · Legacy aliases: /growth, /api/growth-portfolio</text>
 
                 <path d="M595 232 C552 290 390 322 320 382" class="flow-line"></path>
                 <text x="420" y="300" class="step-label" text-anchor="middle">Read raw CSV</text>
@@ -207,7 +208,7 @@
 
                 <path d="M423 790 C610 800 815 735 1020 708" class="flow-line dashed"></path>
                 <path d="M858 850 C942 836 998 812 1050 790" class="flow-line dashed"></path>
-                <text x="960" y="812" class="step-label" text-anchor="middle">Enrich with portfolio + growth_ranked</text>
+                <text x="960" y="812" class="step-label" text-anchor="middle">Enrich with portfolio + final picks</text>
                 <path d="M1155 724 L1155 748" class="flow-line"></path>
                 <path d="M1155 790 L1155 820" class="flow-line"></path>
                 <path d="M1040 790 C952 812 950 888 1000 911" class="flow-line"></path>

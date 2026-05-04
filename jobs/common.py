@@ -40,9 +40,13 @@ DEFAULT_GROWTH_CAGR_OUTPUT = Path(
 DEFAULT_GROWTH_RANKED_OUTPUT = Path(
     os.getenv("GROWTH_RANKED_OUTPUT_PATH", str(PROJECT_ROOT / "output" / "parquet" / "growth_ranked"))
 )
-DEFAULT_GROWTH_EXPORT_OUTPUT = Path(
-    os.getenv("GROWTH_EXPORT_OUTPUT_PATH", str(PROJECT_ROOT / "output" / "exports" / "Top20_Growth_Portfolio.csv"))
+DEFAULT_GROWTH_FINAL_PICKS_OUTPUT = Path(
+    os.getenv(
+        "GROWTH_FINAL_PICKS_OUTPUT_PATH",
+        str(PROJECT_ROOT / "output" / "exports" / "Top20_Growth_Final_Picks.csv"),
+    )
 )
+DEFAULT_GROWTH_EXPORT_OUTPUT = DEFAULT_GROWTH_FINAL_PICKS_OUTPUT
 DEFAULT_MARKET_DASHBOARD_OUTPUT = Path(
     os.getenv("MARKET_DASHBOARD_OUTPUT_PATH", str(PROJECT_ROOT / "output" / "exports" / "market_dashboard.json"))
 )

@@ -49,7 +49,7 @@ async def insights(request: Request) -> HTMLResponse:
     payload = build_investment_insights_view_payload()
     return templates.TemplateResponse(
         request=request,
-        name="growth.html",
+        name="insights.html",
         context={"request": request, "payload": payload},
     )
 
@@ -72,11 +72,17 @@ async def architecture(request: Request) -> HTMLResponse:
 
 @app.get("/api/investment-insights")
 async def get_investment_insights() -> dict:
-    # JSON API สำหรับหน้า Investment Insights
+    # JSON API สำหรับหน้า /insights
+    return build_investment_insights_payload()
+
+
+@app.get("/api/growth-final-picks")
+async def get_growth_final_picks() -> dict:
+    # ชื่อ API ใหม่ที่ตรงกับ CSV final picks และหน้า /insights
     return build_investment_insights_payload()
 
 
 @app.get("/api/growth-portfolio")
-async def get_growth_portfolio() -> dict:
+async def get_legacy_growth_portfolio() -> dict:
     # API alias แบบ legacy ที่คืน payload ชุดเดียวกับหน้า insights
     return build_investment_insights_payload()

@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>หุ้นมาแรงที่ควรเริ่มดู</title>
+    <link rel="stylesheet" href="/static/styles.css?v=20260502j">
+</head>
+<body>
+    <main class="page-shell">
+        <section class="topbar">
+            <div>
+                <p class="kicker">คำตอบพร้อมใช้</p>
+                <h1>หุ้นมาแรงที่ควรเริ่มดู</h1>
+            </div>
+            <nav class="page-links">
+                <a href="/">ภาพรวมตลาด</a>
+                <a href="/insights" class="active">หุ้นแนะนำ</a>
+                <a href="/architecture">Architecture</a>
+            </nav>
+        </section>
+
+        <section class="hero-grid">
+            <article class="hero-panel hero-panel-insights">
+                <p class="eyebrow">คำตอบหลักของหน้านี้</p>
+                <h2>คัดหุ้นโตแรงด้วยสัญญาณเดียวกัน แล้ว export เป็น 20 ตัวที่น่าเริ่มดู</h2>
+                <p class="hero-copy">
+                    CSV ตอนนี้ไม่ใช่ CAGR ดิบแล้ว แต่เป็น final picks ที่ผ่านทั้ง growth และสัญญาณ
+                    จึงใช้รายการนี้เป็นคำตอบหลักได้ทันที
+                </p>
+                <div class="hero-meta">
+                    <div>
+                        <span>ข้อมูล ณ วันที่</span>
+                        <strong>{{ payload.data_as_of or "ยังไม่มี snapshot" }}</strong>
+                    </div>
+                    <div>
+                        <span>จัดเตรียมเมื่อ</span>
+                        <strong>{{ payload.generated_at or "ยังไม่มี snapshot" }}</strong>
+                    </div>
+                </div>
+            </article>
+
+            <article class="hero-panel decision-guide-panel">
+                <div class="panel-heading">
+                    <h3>วิธีอ่านผลลัพธ์</h3>
+                    <p>คำตอบหลักอยู่ที่อันดับแนะนำ ไม่ต้องไล่ดู 140 ตัวก่อน</p>
+                </div>
+                <div class="guide-stack">
+                    <div>
+                        <strong>แนะนำตอนนี้</strong>
+                        <span>โตแรงและสัญญาณผ่าน ใช้เป็น shortlist หลัก</span>
+                    </div>
+                    <div>
+                        <strong>ยังไม่ผ่านสัญญาณ</strong>
+                        <span>จะไม่ถูก export เป็น CSV final 20 จนกว่าสัญญาณจะผ่าน</span>
+                    </div>
+                    <div>
+                        <strong>รายการสำรวจ 140 ตัว</strong>
+                        <span>เป็นรายการสำรวจเพิ่มเติม ไม่ใช่คำตอบสุดท้าย</span>
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <section class="selection-flow" id="selection-flow"></section>
+
+        <section class="table-card final-picks-section">
+            <div class="panel-heading">
+                <h3>แนะนำตอนนี้</h3>
+                <p id="final-picks-caption">หุ้นผู้เข้ารอบ growth ที่ผ่านสัญญาณล่าสุดแล้ว</p>
+            </div>
+            <div class="score-explain-card">
+                <div>
+                    <strong>ดูอันดับจากคะแนนคัดเลือก</strong>
+                    <span>คะแนนนี้รวมสัญญาณล่าสุด อันดับ growth และหักความเสี่ยง จึงเป็นตัวที่ใช้เรียงว่าเริ่มดูตัวไหนก่อน</span>
+                </div>
+                <div>
+                    <strong>โตต่อปีเป็นเหตุผลประกอบ</strong>
+                    <span>ตัวเลขนี้คือ CAGR ย้อนหลังอย่างเดียว หุ้นที่โตแรงมากอาจไม่ได้อยู่อันดับสูงสุดถ้าสัญญาณหรือความเสี่ยงยังไม่ดี</span>
+                </div>
+                <div>
+                    <strong>สูตรย่อ</strong>
+                    <span>คะแนนคัดเลือก = คะแนนสัญญาณ 65% + อันดับ growth 35% - คำเตือนความเสี่ยง</span>
+                </div>
+            </div>
+            <div id="recommendation-strip" class="recommendation-strip"></div>
+            <div id="final-picks-summary-grid" class="growth-summary-grid"></div>
+            <div id="final-picks-list" class="finalist-list"></div>
+        </section>
+
+        <section class="table-card paused-section">
+            <div class="panel-heading">
+                <h3>โตแรงแต่ยังไม่ผ่านสัญญาณ</h3>
+                <p>จะแสดงเฉพาะกรณีที่ CSV final picks ต้องเติมตัวที่ยังไม่ผ่านสัญญาณ</p>
+            </div>
+            <div id="paused-list" class="paused-list"></div>
+        </section>
+
+        <details class="details-panel">
+            <summary>
+                <span>ดูรายการสำรวจเพิ่มเติม 140 ตัว</span>
+                <small>ใช้เป็นรายการสำรวจเพิ่มเติม คะแนนในส่วนนี้คือคะแนนสัญญาณ จึงไม่ควรเทียบตรง ๆ กับคะแนนคัดเลือกของ final 20</small>
+            </summary>
+
+            <section class="explain-card">
+                <strong>ทำไมบางตัวใน radar 140 ดูคะแนนสูงกว่า final 20?</strong>
+                <p>
+                    final 20 ใช้ <b>คะแนนคัดเลือก</b> ที่รวมอันดับเติบโตกับสัญญาณล่าสุด
+                    ส่วน radar 140 ใช้ <b>คะแนนสัญญาณ</b> อย่างเดียว บางตัวจึงสัญญาณดีมาก
+                    แต่ยังอยู่ในรายการสำรวจเพิ่มเติม เพราะอันดับเติบโตยังไม่อยู่กลุ่มต้น ๆ สำหรับ final pick
+                </p>
+            </section>
+
+            <section class="table-card detail-filter-card">
+                <div class="panel-heading">
+                    <h3>ค้นหาในรายการสำรวจ</h3>
+                    <button class="ghost-button" id="reset-insight-filters" type="button">ล้างค่า</button>
+                </div>
+                <div class="filter-grid">
+                    <label>
+                        <span>ค้นหา Ticker</span>
+                        <input id="insight-search" type="search" placeholder="ค้นหาชื่อย่อหุ้น">
+                    </label>
+                    <label>
+                        <span>ป้ายกำกับ</span>
+                        <select id="insight-label-filter">
+                            <option value="All">ทุกป้ายกำกับ</option>
+                            {% for option in payload.filters.labels %}
+                            <option value="{{ option }}">{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>การจัดกลุ่ม</span>
+                        <select id="insight-membership-filter">
+                            <option value="All">ทุกกลุ่ม</option>
+                            {% for option in payload.filters.membership %}
+                            <option value="{{ option }}">{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                </div>
+            </section>
+
+            <section class="metric-grid detail-summary-grid" id="insight-summary-grid"></section>
+
+            <section class="visual-grid insight-overview-grid">
+                <article class="viz-card distribution-card">
+                    <div class="panel-heading">
+                        <h3>สัดส่วนคะแนนสัญญาณ</h3>
+                        <p>การกระจายตัวของ radar 140 ตัวตามป้ายกำกับ</p>
+                    </div>
+                    <div id="score-distribution" class="mix-grid"></div>
+                </article>
+
+                <article class="viz-card spotlight-panel">
+                    <div class="panel-heading">
+                        <h3>ไอเดียเพิ่มเติมที่สัญญาณดี</h3>
+                        <p>หุ้นคะแนนสัญญาณสูงจาก radar 140 ตัว</p>
+                    </div>
+                    <div id="spotlight-cards" class="spotlight-grid"></div>
+                </article>
+            </section>
+
+            <section class="visual-grid insight-detail-grid">
+                <article class="viz-card ladder-panel">
+                    <div class="panel-heading">
+                        <h3>ไอเดียเพิ่มเติมที่สัญญาณดี</h3>
+                        <p>เลขส่วนนี้คือคะแนนสัญญาณเท่านั้น ใช้ดูไอเดียเพิ่ม ไม่ใช่รายการแนะนำหลัก</p>
+                    </div>
+                    <div id="score-ladder" class="stacked-bars"></div>
+                </article>
+
+                <article class="viz-card notes-panel">
+                    <div class="panel-heading">
+                        <h3>ที่มาของสัญญาณ</h3>
+                        <p>ปัจจัยที่ใช้กับ radar และการตรวจผู้เข้ารอบ</p>
+                    </div>
+                    <div class="notes-stack">
+                        {% for note in payload.model_notes %}
+                        <article class="note-card">
+                            <h4>{{ note.title }}</h4>
+                            <p>{{ note.body }}</p>
+                        </article>
+                        {% endfor %}
+                    </div>
+                </article>
+            </section>
+
+            <section class="table-card">
+                <div class="panel-heading">
+                    <h3>ตาราง radar 140 ตัว</h3>
+                    <p id="insight-caption">รายการสำรวจเพิ่มเติม ใช้คะแนนสัญญาณ ไม่ใช่คะแนนคัดเลือก final picks</p>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>ป้ายกำกับ</th>
+                                <th>คะแนนสัญญาณ</th>
+                                <th>ผลตอบแทน</th>
+                                <th>ช่วงแกว่ง</th>
+                                <th>RSI</th>
+                                <th>MACD</th>
+                                <th>การจัดกลุ่ม</th>
+                                <th>เหตุผลสนับสนุน</th>
+                                <th>คำเตือน</th>
+                            </tr>
+                        </thead>
+                        <tbody id="insight-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </details>
+    </main>
+
+    <script>
+        const insightPayload = {{ payload | tojson }};
+
+        const selectionFlow = document.getElementById("selection-flow");
+        const insightSummaryGrid = document.getElementById("insight-summary-grid");
+        const finalPicksSummaryGrid = document.getElementById("final-picks-summary-grid");
+        const recommendationStrip = document.getElementById("recommendation-strip");
+        const finalPicksList = document.getElementById("final-picks-list");
+        const finalPicksCaption = document.getElementById("final-picks-caption");
+        const pausedSection = document.querySelector(".paused-section");
+        const pausedList = document.getElementById("paused-list");
+        const scoreDistribution = document.getElementById("score-distribution");
+        const spotlightCards = document.getElementById("spotlight-cards");
+        const scoreLadder = document.getElementById("score-ladder");
+        const insightTableBody = document.getElementById("insight-table-body");
+        const insightCaption = document.getElementById("insight-caption");
+
+        const insightSearch = document.getElementById("insight-search");
+        const insightLabelFilter = document.getElementById("insight-label-filter");
+        const insightMembershipFilter = document.getElementById("insight-membership-filter");
+        const resetInsightFilters = document.getElementById("reset-insight-filters");
+        const finalPickRows = [...(insightPayload.growth_final_picks || [])].sort((a, b) => {
+            const decisionA = a.decision_score ?? -1;
+            const decisionB = b.decision_score ?? -1;
+            if (decisionA !== decisionB) return decisionB - decisionA;
+            const rankA = a.growth_rank || 999999;
+            const rankB = b.growth_rank || 999999;
+            return rankA - rankB || a.ticker.localeCompare(b.ticker);
+        });
+        const finalPickTickerSet = new Set(finalPickRows.map((row) => row.ticker));
+        const candidateLookup = new Map((insightPayload.candidates || []).map((row) => [row.ticker, row]));
+
+        function formatPercent(value) {
+            if (value === null || value === undefined) return "-";
+            return `${(value * 100).toFixed(2)}%`;
+        }
+
+        function formatNumber(value, digits = 2) {
+            if (value === null || value === undefined) return "-";
+            return Number(value).toLocaleString(undefined, {
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits
+            });
+        }
+
+        function formatRank(value) {
+            if (value === null || value === undefined) return "-";
+            return Number(value).toLocaleString();
+        }
+
+        function formatPrice(value) {
+            if (value === null || value === undefined) return "-";
+            return `$${formatNumber(value, 2)}`;
+        }
+
+        function formatMultiple(value) {
+            if (value === null || value === undefined) return "-";
+            return `${formatNumber(value, 2)}x`;
+        }
+
+        function formatYears(value) {
+            if (value === null || value === undefined) return "-";
+            return `${formatNumber(value, 2)} ปี`;
+        }
+
+        function toneClass(label) {
+            if (label === "น่าจับตา") return "positive";
+            if (label === "ควรระวัง") return "negative";
+            return "neutral";
+        }
+
+        function growthTone(row) {
+            return toneClass(row.insight_label);
+        }
+
+        function recommendationTone(row) {
+            if (row.recommendation_key === "consider_first") return "positive";
+            if (row.recommendation_key === "wait_setup") return "negative";
+            return "neutral";
+        }
+
+        function recommendationText(row) {
+            if (row.recommendation_key === "consider_first") return "เริ่มดูก่อน";
+            if (row.recommendation_key === "watch_risk") return "มาแรงแต่ดูความเสี่ยง";
+            if (row.recommendation_key === "watch_timing") return "รอจังหวะ";
+            if (row.recommendation_key === "wait_setup") return "ยังไม่รีบ";
+            return row.recommendation || "ตรวจเพิ่ม";
+        }
+
+        function conciseReasons(row) {
+            const reasons = row.reasons || [];
+            if (reasons.length) return reasons.slice(0, 2).join(" + ");
+            return "โตแรงและสัญญาณล่าสุดยังผ่านเกณฑ์";
+        }
+
+        function conciseWarnings(row) {
+            const warnings = row.warnings || [];
+            if (warnings.length) return warnings.slice(0, 2).join(" + ");
+            if (row.recommendation_key === "watch_timing") return "สัญญาณยังไม่ชัดพอ";
+            return "ต้องรอให้ความเสี่ยงลดลง";
+        }
+
+        function finalistRiskNote(row) {
+            const warnings = row.warnings || [];
+            if (warnings.length) return `ข้อควรระวัง: ${warnings.slice(0, 2).join(" + ")}`;
+            return "ข้อควรระวัง: ยังไม่พบ warning หลักในสัญญาณรอบนี้";
+        }
+
+        function insightStatus(row) {
+            if (row.insight_label && row.insight_score !== null && row.insight_score !== undefined) {
+                return `
+                    <span class="status-pill ${toneClass(row.insight_label)}">
+                        ${row.insight_label} · ${formatNumber(row.insight_score, 1)}
+                    </span>
+                `;
+            }
+            return `<span class="status-pill neutral">ต้องตรวจเพิ่ม</span>`;
+        }
+
+        function matchesMembership(row, membershipValue) {
+            if (membershipValue === "All") return true;
+            if (membershipValue === "พอร์ตหลัก") return row.in_portfolio;
+            if (membershipValue === "เฝ้าดูเติบโต") return row.in_growth_watchlist;
+            return !row.in_portfolio && !row.in_growth_watchlist;
+        }
+
+        function filteredCandidates() {
+            const searchValue = insightSearch.value.trim().toUpperCase();
+            const labelValue = insightLabelFilter.value;
+            const membershipValue = insightMembershipFilter.value;
+
+            return insightPayload.candidates.filter((row) => {
+                if (searchValue && !row.ticker.includes(searchValue)) return false;
+                if (labelValue !== "All" && row.insight_label !== labelValue) return false;
+                if (!matchesMembership(row, membershipValue)) return false;
+                return true;
+            });
+        }
+
+        function renderInsightSummary(rows) {
+            const avgScore = rows.length ? rows.reduce((sum, row) => sum + row.insight_score, 0) / rows.length : 0;
+            const worthWatching = rows.filter((row) => row.insight_label === "น่าจับตา").length;
+            const stable = rows.filter((row) => row.insight_label === "ค่อนข้างนิ่ง").length;
+            const caution = rows.filter((row) => row.insight_label === "ควรระวัง").length;
+
+            const cards = [
+                { label: "จำนวนที่แสดง", value: rows.length, helper: "radar หลังใช้ตัวกรอง" },
+                { label: "น่าจับตา", value: worthWatching, helper: "มีจังหวะดีแต่ยังไม่ใช่ final pick เสมอไป", tone: "positive" },
+                { label: "ค่อนข้างนิ่ง", value: stable, helper: "ภาพรวมสมดุล" },
+                { label: "ควรระวัง", value: caution, helper: "ใช้ดูความเสี่ยง ไม่ใช่ตัวแนะนำ", tone: "negative" },
+                { label: "คะแนนสัญญาณเฉลี่ย", value: formatNumber(avgScore, 2), helper: "ของ radar ที่กำลังแสดง" }
+            ];
+
+            insightSummaryGrid.innerHTML = cards.map((card) => `
+                <article class="metric-card ${card.tone || ""}">
+                    <span>${card.label}</span>
+                    <strong>${card.value}</strong>
+                    <small>${card.helper}</small>
+                </article>
+            `).join("");
+        }
+
+        function renderSelectionFlow(investableRows, pausedRows) {
+            const tracked = insightPayload.summary?.tracked_count || 0;
+            const radarCount = insightPayload.candidates?.length || 0;
+            const flowCards = [
+                { label: "ทั้งตลาด", value: tracked, helper: "จุดเริ่มต้นของระบบ" },
+                { label: "radar สัญญาณ", value: radarCount, helper: "มีจังหวะให้สำรวจเพิ่ม" },
+                { label: "CSV final picks", value: finalPickRows.length, helper: "ผ่าน growth และสัญญาณแล้ว" },
+                { label: "แนะนำตอนนี้", value: investableRows.length, helper: "ใช้เป็น shortlist หลัก", tone: "positive" },
+            ];
+            if (pausedRows.length) {
+                flowCards.push({ label: "ยังไม่ผ่านสัญญาณ", value: pausedRows.length, helper: "แยกไว้ ไม่ใช่ตัวแนะนำ" });
+            }
+
+            selectionFlow.innerHTML = flowCards.map((card, index) => `
+                <article class="flow-card ${card.tone || ""}">
+                    <span>${index + 1}</span>
+                    <div>
+                        <small>${card.label}</small>
+                        <strong>${card.value.toLocaleString()}</strong>
+                        <em>${card.helper}</em>
+                    </div>
+                </article>
+            `).join("");
+        }
+
+        function renderPausedRows(pausedRows) {
+            pausedSection.hidden = pausedRows.length === 0;
+            if (!pausedRows.length) {
+                pausedList.innerHTML = `<p class="empty-state">ไม่มีหุ้นผู้เข้ารอบที่ถูกพักไว้ในรอบนี้</p>`;
+                return;
+            }
+
+            pausedList.innerHTML = pausedRows.map((row) => `
+                <article class="paused-card">
+                    <div>
+                        <strong>${row.ticker}</strong>
+                        <span>${recommendationText(row)}</span>
+                    </div>
+                    <p>${conciseWarnings(row)}</p>
+                    <small>โตต่อปี ${formatPercent(row.cagr_percentage)} · คะแนนคัดเลือก ${formatNumber(row.decision_score, 1)}</small>
+                </article>
+            `).join("");
+        }
+
+        function renderGrowthFinalPicks() {
+            if (!finalPickRows.length) {
+                renderSelectionFlow([], []);
+                renderPausedRows([]);
+                recommendationStrip.innerHTML = `<p class="empty-state">ยังไม่มีรายชื่อหุ้นมาแรงสำหรับจัดอันดับ</p>`;
+                finalPicksSummaryGrid.innerHTML = `
+                    <article class="metric-card">
+                        <span>หุ้นมาแรง</span>
+                        <strong>0</strong>
+                        <small>ยังไม่พบไฟล์ CSV สำหรับแสดง final picks</small>
+                    </article>
+                `;
+                finalPicksList.innerHTML = `<p class="empty-state">ยังไม่มีข้อมูล growth final picks</p>`;
+                return;
+            }
+
+            const investableRows = finalPickRows.filter((row) => row.recommendation_key === "consider_first");
+            const pausedRows = finalPickRows.filter((row) => row.recommendation_key !== "consider_first");
+            const recommendationRows = investableRows.slice(0, 5);
+            const averageCagr = investableRows.length
+                ? investableRows.reduce((sum, row) => sum + (row.cagr_percentage || 0), 0) / investableRows.length
+                : 0;
+            const readyCount = investableRows.length;
+            const pausedCount = pausedRows.length;
+            const yearValues = [...investableRows]
+                .map((row) => row.years_active)
+                .filter((value) => value !== null && value !== undefined)
+                .sort((a, b) => a - b);
+            const medianYears = yearValues[Math.floor(yearValues.length / 2)] || 0;
+
+            renderSelectionFlow(investableRows, pausedRows);
+            renderPausedRows(pausedRows);
+
+            recommendationStrip.innerHTML = recommendationRows.length ? recommendationRows.map((row, index) => `
+                <article class="recommendation-card ${recommendationTone(row)}">
+                    <span>อันดับแนะนำ ${index + 1}</span>
+                    <div>
+                        <h4>${row.ticker}</h4>
+                        <strong>${recommendationText(row)}</strong>
+                    </div>
+                    <p>${conciseReasons(row)}</p>
+                </article>
+            `).join("") : `<p class="empty-state">รอบนี้ยังไม่มีผู้เข้ารอบ growth ที่ผ่านสัญญาณครบ</p>`;
+
+            const summaryCards = [
+                { label: "CSV final picks", value: finalPickRows.length, helper: "ผ่านทั้ง growth และสัญญาณ" },
+                { label: "แนะนำตอนนี้", value: readyCount, helper: "ใช้เป็น shortlist หลัก", tone: "positive" },
+                { label: "โตเฉลี่ยต่อปี", value: formatPercent(averageCagr), helper: "เฉพาะตัวที่แนะนำตอนนี้", tone: "positive" },
+                { label: "ยังไม่ผ่านสัญญาณ", value: pausedCount, helper: "ไม่ถูกปนใน CSV final picks" }
+            ];
+
+            finalPicksSummaryGrid.innerHTML = summaryCards.map((card) => `
+                <article class="metric-card ${card.tone || ""}">
+                    <span>${card.label}</span>
+                    <strong>${card.value}</strong>
+                    <small>${card.helper}</small>
+                </article>
+            `).join("");
+
+            finalPicksCaption.textContent = `เรียงจากคะแนนคัดเลือก ซึ่งรวมอันดับเติบโตและสัญญาณล่าสุด ระยะเวลามัธยฐานประมาณ ${formatYears(medianYears)}`;
+            if (!investableRows.length) {
+                finalPicksList.innerHTML = `<p class="empty-state">ยังไม่มีตัวที่ผ่านทั้ง growth และสัญญาณในรอบนี้</p>`;
+                return;
+            }
+            finalPicksList.innerHTML = investableRows.map((row, index) => `
+                <article class="finalist-card ${recommendationTone(row)}">
+                    <div class="finalist-rank">
+                        <span>อันดับ ${index + 1}</span>
+                        <strong>${row.ticker}</strong>
+                    </div>
+                    <div class="finalist-answer">
+                        <span class="status-pill ${recommendationTone(row)}">${recommendationText(row)}</span>
+                        <small>ยึดอันดับตามคะแนนคัดเลือก</small>
+                    </div>
+                    <div class="finalist-score">
+                        <div class="primary-score">
+                            <span>คะแนนคัดเลือก</span>
+                            <strong>${formatNumber(row.decision_score, 1)}</strong>
+                        </div>
+                        <div class="score-meter">
+                            <div class="score-meter-fill" style="width:${Math.max(0, Math.min(row.decision_score || 0, 100))}%"></div>
+                        </div>
+                        <div class="supporting-metrics">
+                            <span>เหตุผล: โตต่อปี <strong>${formatPercent(row.cagr_percentage)}</strong></span>
+                            <span>สัญญาณ <strong>${formatNumber(row.insight_score, 1)}</strong></span>
+                        </div>
+                        <p class="finalist-note">${conciseReasons(row)}</p>
+                        <p class="finalist-risk ${row.warnings?.length ? "has-warning" : ""}">${finalistRiskNote(row)}</p>
+                    </div>
+                </article>
+            `).join("");
+        }
+
+        function renderDistribution(rows) {
+            const counts = rows.reduce((accumulator, row) => {
+                accumulator[row.insight_label] = (accumulator[row.insight_label] || 0) + 1;
+                return accumulator;
+            }, {});
+
+            scoreDistribution.innerHTML = ["น่าจับตา", "ค่อนข้างนิ่ง", "ควรระวัง"].map((label) => `
+                <div class="mix-card ${toneClass(label)}">
+                    <span>${label}</span>
+                    <strong>${counts[label] || 0}</strong>
+                </div>
+            `).join("");
+        }
+
+        function renderSpotlight(rows) {
+            const radarOnlyRows = rows.filter((row) => !finalPickTickerSet.has(row.ticker));
+            spotlightCards.innerHTML = radarOnlyRows.slice(0, 4).map((row) => `
+                <article class="spotlight-card ${toneClass(row.insight_label)}">
+                    <div>
+                        <span>${row.insight_label} · ไอเดียเพิ่มเติม</span>
+                        <h4>${row.ticker}</h4>
+                    </div>
+                    <strong class="radar-score-label">สัญญาณ ${formatNumber(row.insight_score, 1)}</strong>
+                    <p>${row.reasons.join(" • ") || "ภาพรวมของ snapshot ปัจจุบันยังผสมกันอยู่"}</p>
+                </article>
+            `).join("");
+        }
+
+        function renderLadder(rows) {
+            const topRows = rows.filter((row) => !finalPickTickerSet.has(row.ticker)).slice(0, 8);
+            const maxScore = Math.max(...topRows.map((row) => row.insight_score), 1);
+
+            scoreLadder.innerHTML = topRows.map((row) => `
+                <div class="bar-row radar-bar-row">
+                    <span>
+                        <strong>${row.ticker}</strong>
+                        <small>คะแนนสัญญาณล่าสุด</small>
+                    </span>
+                    <div class="bar-track">
+                        <div class="bar-fill neutral" style="width:${(row.insight_score / maxScore) * 100}%"></div>
+                    </div>
+                    <strong class="radar-signal-score">สัญญาณ ${formatNumber(row.insight_score, 1)}</strong>
+                </div>
+            `).join("");
+        }
+
+        function renderInsightTable(rows) {
+            const topRows = rows.slice(0, 40);
+            insightCaption.textContent = `กำลังแสดง ${topRows.length} หุ้นจาก radar ทั้งหมด ${rows.length} ตัวหลังใช้ตัวกรอง`;
+            insightTableBody.innerHTML = topRows.map((row) => `
+                <tr>
+                    <td class="ticker-cell">${row.ticker}</td>
+                    <td class="${toneClass(row.insight_label)}">${row.insight_label}</td>
+                    <td>${formatNumber(row.insight_score, 2)}</td>
+                    <td>${formatPercent(row.return_pct)}</td>
+                    <td>${formatPercent(row.range_pct)}</td>
+                    <td>${formatNumber(row.rsi_14)}</td>
+                    <td>${formatNumber(row.macd_12_26_9, 3)}</td>
+                    <td>${row.in_portfolio ? "พอร์ตหลัก" : "รายการสำรวจ"}</td>
+                    <td>${row.reasons.join(", ") || "-"}</td>
+                    <td>${row.warnings.join(", ") || "-"}</td>
+                </tr>
+            `).join("");
+        }
+
+        function renderInsights() {
+            const rows = filteredCandidates();
+            renderInsightSummary(rows);
+            renderDistribution(rows);
+            renderSpotlight(rows);
+            renderLadder(rows);
+            renderInsightTable(rows);
+        }
+
+        [insightSearch, insightLabelFilter, insightMembershipFilter].forEach((node) => {
+            node.addEventListener("input", renderInsights);
+            node.addEventListener("change", renderInsights);
+        });
+
+        resetInsightFilters.addEventListener("click", () => {
+            insightSearch.value = "";
+            insightLabelFilter.value = "All";
+            insightMembershipFilter.value = "All";
+            renderInsights();
+        });
+
+        renderGrowthFinalPicks();
+        renderInsights();
+    </script>
+</body>
+</html>

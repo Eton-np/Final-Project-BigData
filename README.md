@@ -9,9 +9,9 @@ End-to-end Apache Airflow + PySpark project for building a stock analytics pipel
 3. Cleans invalid rows, fills missing price values where possible, removes rows with no trading activity, and deduplicates by `Ticker` and `Date`
 4. Calculates technical indicators including `Daily_Return`, `MA50`, `MA200`, `Volatility30`, `RSI_14`, `MACD_12_26_9`, and `CCI_14_0_015`
 5. Selects a monthly core portfolio using `MA50 > MA200`, lowest volatility, and equal weighting
-6. Builds a growth watchlist ranked by long-term CAGR
+6. Builds growth final picks by combining long-term CAGR ranking with the latest signal score
 7. Writes Parquet datasets, CSV exports, and dashboard JSON snapshots
-8. Serves a web dashboard for market overview, investment insights, and architecture explanation
+8. Serves a web dashboard for market overview, growth final picks, radar insights, and architecture explanation
 
 The current Docker/Airflow default uses `PORTFOLIO_SIZE=10`, so the core portfolio export contains up to 10 stocks per month. Change `PORTFOLIO_SIZE` in `.env.example` or `docker-compose.yml` if you want a different portfolio size.
 
@@ -53,7 +53,7 @@ The pipeline derives `Ticker` from each CSV filename when the source file does n
 |   |-- extract_growth_start_end.py
 |   |-- calculate_growth_cagr.py
 |   |-- filter_rank_growth.py
-|   |-- export_growth_portfolio.py
+|   |-- export_growth_final_picks.py
 |   |-- dashboard_datasets.py
 |   |-- dashboard_snapshot_spark.py
 |   |-- build_market_dashboard_data.py
@@ -87,10 +87,10 @@ Main portfolio pipeline:
 CSV ingest -> Parquet -> clean -> indicators -> portfolio selection -> CSV export
 ```
 
-Growth pipeline:
+Growth final picks pipeline:
 
 ```text
-clean stock history -> start/end extraction -> CAGR calculation -> growth ranking -> CSV export
+clean stock history -> start/end extraction -> CAGR calculation -> growth ranking -> signal scoring -> final picks CSV
 ```
 
 Dashboard refresh:
@@ -102,7 +102,7 @@ Parquet datasets -> market_dashboard.json -> investment_insights.json -> FastAPI
 ## Airflow DAGs
 
 - `stock_portfolio_pipeline`: runs the main Spark jobs from raw CSV ingestion to `final_portfolio.csv`
-- `growth_portfolio_pipeline`: builds the Top 20 growth portfolio from long-term CAGR
+- `growth_final_picks_pipeline`: builds 20 growth final picks from growth rank plus signal scoring
 - `dashboard_refresh_pipeline`: refreshes `market_dashboard.json` and `investment_insights.json`
 
 The DAGs are manual-trigger DAGs. The dashboard shows data after a local pipeline run or Airflow DAG run creates the prepared snapshot files.
@@ -112,12 +112,13 @@ The DAGs are manual-trigger DAGs. The dashboard shows data after a local pipelin
 Routes:
 
 - `/`: Market Dashboard
-- `/insights`: Investment Insights
-- `/growth`: alias for Investment Insights
+- `/insights`: Growth Final Picks and radar insights
+- `/growth`: legacy alias for `/insights`
 - `/architecture`: pipeline architecture page for presentation
 - `/api/portfolio`: market dashboard JSON
-- `/api/investment-insights`: investment insights JSON
-- `/api/growth-portfolio`: legacy alias for investment insights JSON
+- `/api/investment-insights`: final picks and radar insights JSON
+- `/api/growth-final-picks`: alias with the current final-picks naming
+- `/api/growth-portfolio`: legacy alias for `/api/investment-insights`
 
 The Market Dashboard includes:
 
@@ -128,13 +129,14 @@ The Market Dashboard includes:
 - Risk-vs-return scatter chart
 - Movers, activity, signal mix, and universe table
 
-The Investment Insights page includes:
+The `/insights` page includes:
 
 - Score-based labels: `Worth Watching`, `Stable`, and `Caution`
-- Spotlight candidates with reasons and warnings
-- Score distribution and ranking ladder
-- Portfolio/growth watchlist overlap
-- Ranked candidate table
+- Growth Final Picks section that answers which stocks to start with first
+- `Decision_Score` ranking that blends signal score, growth rank, and risk warnings
+- Supporting CAGR and signal metrics, shown as context instead of the primary sort
+- Radar 140 section for additional ideas that are not the main recommendation list
+- Ranked radar table with signal reasons and warnings
 
 ## Local Run
 
@@ -158,6 +160,10 @@ spark-submit jobs/cleanse_data.py
 spark-submit jobs/calculate_indicators.py
 spark-submit jobs/select_portfolio.py
 spark-submit jobs/export_portfolio.py
+spark-submit jobs/extract_growth_start_end.py
+spark-submit jobs/calculate_growth_cagr.py
+spark-submit jobs/filter_rank_growth.py
+spark-submit jobs/export_growth_final_picks.py
 python jobs/build_market_dashboard_data.py --mark-airflow-run
 python jobs/build_investment_insights.py --mark-airflow-run
 ```
@@ -229,6 +235,7 @@ Important defaults:
 - `PORTFOLIO_SIZE=10` in Docker Compose
 - `GROWTH_MINIMUM_YEARS=1`
 - `GROWTH_MINIMUM_PRICE=5`
+- `GROWTH_FINAL_PICKS_OUTPUT_PATH=output/exports/Top20_Growth_Final_Picks.csv`
 
 Copy `.env.example` to `.env` if you want local overrides.
 
@@ -242,9 +249,9 @@ Copy `.env.example` to `.env` if you want local overrides.
 - Growth start/end Parquet: `output/parquet/growth_start_end`
 - Growth CAGR Parquet: `output/parquet/growth_cagr`
 - Growth ranked Parquet: `output/parquet/growth_ranked`
-- Growth CSV export: `output/exports/Top20_Growth_Portfolio.csv`
+- Growth final picks CSV: `output/exports/Top20_Growth_Final_Picks.csv`
 - Market dashboard snapshot: `output/exports/market_dashboard.json`
-- Investment insights snapshot: `output/exports/investment_insights.json`
+- Insights snapshot for final picks and radar: `output/exports/investment_insights.json`
 
 These outputs are generated artifacts and are not committed to Git.
 
@@ -268,7 +275,7 @@ For oral presentation, explain the project in this order:
 
 1. Raw CSV data is too large and slow to scan repeatedly, so the project converts it to partitioned Parquet.
 2. The clean step makes the stock history usable by filtering invalid trading rows and standardizing date/year/month fields.
-3. The analysis layer calculates moving averages, volatility, RSI, MACD, CCI, monthly portfolio selection, and growth CAGR.
+3. The analysis layer calculates moving averages, volatility, RSI, MACD, CCI, monthly portfolio selection, growth CAGR, and the final-pick score used by `/insights`.
 4. Airflow orchestrates the jobs, while FastAPI serves prepared dashboard snapshots.
 5. The dashboard is current relative to the latest generated snapshot, not live market pricing.
 

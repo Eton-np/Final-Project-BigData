@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-# script wrapper ขนาดเล็กสำหรับให้ Airflow หรือการรันแบบ local ใช้สร้าง Investment Insights JSON snapshot
+# script wrapper ขนาดเล็กสำหรับให้ Airflow หรือการรันแบบ local ใช้สร้าง snapshot ของหน้า /insights
 
 from pathlib import Path
 import sys
@@ -25,7 +25,7 @@ def main() -> None:
     args = parser.parse_args()
 
     payload = build_investment_insights_dataset()
-    # JSON ที่เขียนออกมาคือ dataset ที่หน้า /insights และ API ที่เกี่ยวข้องจะนำไปใช้
+    # JSON ที่เขียนออกมาคือ dataset ที่หน้า /insights ใช้แสดง final picks และ radar
     output_path = write_json_output(payload, Path(args.output_file).resolve())
     if args.mark_airflow_run:
         write_airflow_ready_marker(DEFAULT_INVESTMENT_INSIGHTS_READY_MARKER, output_path)

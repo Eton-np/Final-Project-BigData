@@ -56,6 +56,6 @@ Invoke-Step "Running indicators..." $runner @((Join-Path $projectRoot "jobs\\cal
 Invoke-Step "Running portfolio selection..." $runner @((Join-Path $projectRoot "jobs\\select_portfolio.py"))
 Invoke-Step "Running export..." $runner @((Join-Path $projectRoot "jobs\\export_portfolio.py"))
 Invoke-Step "Building market dashboard data..." $pythonCommand @((Join-Path $projectRoot "jobs\\build_market_dashboard_data.py"), "--mark-airflow-run")
-Invoke-Step "Building investment insights..." $pythonCommand @((Join-Path $projectRoot "jobs\\build_investment_insights.py"), "--mark-airflow-run")
+Invoke-Step "Building /insights snapshot..." $pythonCommand @((Join-Path $projectRoot "jobs\\build_investment_insights.py"), "--mark-airflow-run")
 
 Write-Host "Pipeline completed."

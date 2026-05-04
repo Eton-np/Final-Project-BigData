@@ -1,4 +1,4 @@
-from web.portfolio_service import build_dashboard_payload, build_growth_dashboard_payload
+from web.portfolio_service import build_dashboard_payload, build_growth_final_picks_payload
 
 
 def test_dashboard_payload_shape() -> None:
@@ -17,13 +17,16 @@ def test_dashboard_payload_shape() -> None:
     assert 10 in payload["filters"]["lookback_years"]
 
 
-def test_growth_dashboard_payload_shape() -> None:
-    # smoke test สำหรับ payload ของหน้า investment insights
+def test_growth_final_picks_payload_shape() -> None:
+    # smoke test สำหรับ payload ของหน้า /insights
     # ช่วยจับกรณีที่โครงสร้าง JSON เปลี่ยนจนหน้า dashboard อาจพัง
-    payload = build_growth_dashboard_payload()
+    payload = build_growth_final_picks_payload()
     assert "generated_at" in payload
     assert "summary" in payload
     assert "spotlight" in payload
     assert "score_distribution" in payload
+    assert "growth_final_picks" in payload
+    assert "growth_final_picks_summary" in payload
     assert isinstance(payload["spotlight"], list)
+    assert isinstance(payload["growth_final_picks"], list)
     assert isinstance(payload["summary"], dict)
